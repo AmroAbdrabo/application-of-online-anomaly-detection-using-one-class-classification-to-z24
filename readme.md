@@ -1,4 +1,4 @@
-# Amros Student Master Thesis
+# Amros Master Thesis
 ## Overview
 
 This repository contains the code and resources for the "Amros Student Master Thesis" project. The project aims to investigate and implement various techniques for assessing the damage state of bridge.
