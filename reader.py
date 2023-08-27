@@ -45,9 +45,11 @@ def windowize(arr, n):
 
 # on my computer root is 'C:\\Users\\amroa\\Documents\\thesis\\data'
 # window size is 6000
-def fetch_signals(root, window_size = 6000, subset = True):
+def fetch_signals(root, window_size = 6000, train = True, train_split = 0.3):
     """
-    subset: if True, then get training portion of data
+    window_size: length of a subdivision of original signal (6000 samples * (1/100) seconds/samples = 60 second sample)
+    train: if True, then get training portion of data
+    train_split: what proportion to use as training data (by default one third)
     """
     from scipy.io import loadmat
     signals = []
@@ -70,26 +72,33 @@ def fetch_signals(root, window_size = 6000, subset = True):
                 # full_path_2 is of the form C:\Users\amroa\Documents\thesis\data\01\avt
                 full_path_2 = os.path.join(full_path, filename_1)
                 setup_filenames = [filename for filename in os.listdir(full_path_2) if "setup" in filename]
-                if subset:
-                    random_setup_filename = random.choice(setup_filenames)
-                    full_path_3 = os.path.join(full_path_2, random_setup_filename)
-                    # full_path_3 is of the form C:\Users\amroa\Documents\thesis\data\01\avt\01setup09.mat
+                if train:
+                    # take train_split percent of data
+                    train_files = setup_filenames[0:int(len(setup_filenames)*train_split)]
 
-                    avt = loadmat(full_path_3)
-                    avt_t = avt['data'].transpose()
-
-                    # split the signal into smaller signals of sample size window_size 
-                    windows = windowize(avt_t[0], len(avt_t[0])/window_size)
-                    [signals.append(i) for i in windows] 
-                else:
-                    for filename_2 in setup_filenames:
-                        full_path_3 = os.path.join(full_path_2, random_setup_filename)
-                        # full_path_3 is of the form C:\Users\amroa\Documents\thesis\data\01\avt\01setup09.mat
+                    # iterate through them
+                    for file_train in train_files:
+                        full_path_3 = os.path.join(full_path_2, file_train) # full_path_3 is of the form C:\Users\amroa\Documents\thesis\data\01\avt\01setup09.mat
+                        
                         avt = loadmat(full_path_3)
                         avt_t = avt['data'].transpose()
-                        
+
                         # split the signal into smaller signals of sample size window_size 
-                        windows = windowize(avt_t[1], len(avt_t[1])/window_size)  # this can be done for 1 to len(avt_t) for complete set of test cases
-                        [signals.append(i) for i in windows] 
+                        windows = [windowize(avt_t[i], len(avt_t[i])/window_size) for i in range(len(avt_t))]
+                        [[signals.append(i) for i in window] for window in windows] 
+                else:
+                    # take test_split percent of data
+                    test_files = setup_filenames[int(len(setup_filenames)*train_split):]
+
+                    # iterate through them
+                    for file_test in test_files:
+                        full_path_3 = os.path.join(full_path_2, file_test) # full_path_3 is of the form C:\Users\amroa\Documents\thesis\data\01\avt\01setup09.mat
+                        
+                        avt = loadmat(full_path_3)
+                        avt_t = avt['data'].transpose()
+
+                        # split the signal into smaller signals of sample size window_size 
+                        windows = [windowize(avt_t[i], len(avt_t[i])/window_size) for i in range(len(avt_t))]
+                        [[signals.append(i) for i in window] for window in windows] 
     return signals
 
