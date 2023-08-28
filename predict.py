@@ -1,4 +1,3 @@
-import sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 import numpy as np

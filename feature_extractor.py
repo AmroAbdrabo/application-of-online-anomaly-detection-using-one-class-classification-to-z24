@@ -15,9 +15,6 @@ def frequency_domain_characteristics(signal, fs=100):
     freqs = fftfreq(n, d=1/fs)
     magnitude = np.abs(fft(signal))
     
-    # spec. density
-    spectral_density = magnitude / n
-    
     # fundamental freq.
     fundamental_frequency = freqs[np.argmax(magnitude)]
     
@@ -41,13 +38,10 @@ def frequency_domain_characteristics(signal, fs=100):
     arithmetic_mean = np.mean(magnitude)
     spectral_flatness = geometric_mean / arithmetic_mean
     
-    return [
-        freqs, 
-        magnitude,
-        spectral_density,
+    return [ 
+        *magnitude,
         fundamental_frequency,
         bandwidth,
-        harmonics,
         thd,
         spectral_flatness
     ]
