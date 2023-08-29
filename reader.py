@@ -52,7 +52,7 @@ def windowize(arr, n):
 
 # on my computer root is 'C:\\Users\\amroa\\Documents\\thesis\\data'
 # window size is 16384 which is 2.7 minutes
-def fetch_signals(root, window_size = 16384, train = True, train_split = 0.7):
+def fetch_signals(root, window_size = 16384, train = True, train_split = 0.2):
     """
     window_size: length of a subdivision of original signal (6000 samples * (1/100) seconds/samples = 60 second sample)
     train: if True, then get training portion of data

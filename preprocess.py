@@ -7,6 +7,7 @@ def standardize_signal(signal):
     mean_signal = np.mean(signal)
     std_signal = np.std(signal)
     standard_signal = (signal - mean_signal) / std_signal
+    
     return standard_signal
 
 def remove_dc_component(signal):
