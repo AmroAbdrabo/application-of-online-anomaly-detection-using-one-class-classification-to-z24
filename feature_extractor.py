@@ -59,7 +59,7 @@ def time_domain_characteristics(signal):
     zero_crossings = np.where(np.diff(np.sign(signal)))[0]
     zero_crossing_rate = len(zero_crossings) / len(signal)
     # autocorrelation (for lag = 1 as example)
-    autocorrelation_lag1 = np.correlate(signal, signal, mode='full')[len(signal)-1 + 1]
+    autocorrelation_lag1 = np.sum(signal[:-1] * signal[1:])
 
     return [
         root_mean_sq,
