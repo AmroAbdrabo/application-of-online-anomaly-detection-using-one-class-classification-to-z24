@@ -1,1 +1,1 @@
-{"best_params": {"learning_rate": 0.1, "n_estimators": 100}, "best_score": 0.7262865605331358}
+{"best_params": {"learning_rate": 0.1, "n_estimators": 50}, "best_score": 0.7186227323213625}
