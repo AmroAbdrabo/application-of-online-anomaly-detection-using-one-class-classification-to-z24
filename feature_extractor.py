@@ -10,41 +10,31 @@ def frequency_domain_characteristics(signal, fs=100):
     :return: List containing frequency domain characteristics.
     """
     n = len(signal)
-    
-    # FT
-    freqs = fftfreq(n, d=1/fs)
-    magnitude = np.abs(fft(signal))
-    
+    frequencies = np.fft.fftfreq(n, 1/fs)
+    yf = fft(signal)
+
     # fundamental freq.
-    fundamental_frequency = freqs[np.argmax(magnitude)]
-    
-    half_power = np.max(magnitude) / 2
-    lower_bandwidth_freq = freqs[np.argmax(magnitude[magnitude > half_power])]
-    upper_bandwidth_frequ = freqs[::-1][np.argmax(magnitude[::-1][magnitude > half_power])]
-    bandwidth = upper_bandwidth_frequ - lower_bandwidth_freq
-    
-    # find peaks in magnitude spectrum, sort them in decreasing order of magnitude
-    peak_indices, _ = find_peaks(magnitude)
-    sorted_peaks = sorted(peak_indices, key=lambda i: -magnitude[i])
-    harmonics = freqs[sorted_peaks]
-    
-    if len(harmonics) > 1:
-        thd = np.sqrt(sum(magnitude[sorted_peaks[1:]]**2)) / magnitude[sorted_peaks[0]] # total harmonic distrotion
-    else:
-        thd = 0
-    
-    # spectral flatnes
-    geometric_mean = np.exp(np.mean(np.log(magnitude + 1e-10)))
-    arithmetic_mean = np.mean(magnitude)
-    spectral_flatness = geometric_mean / arithmetic_mean
-    
-    return [ 
-        *magnitude,
-        fundamental_frequency,
-        bandwidth,
-        thd,
-        spectral_flatness
-    ]
+    fundamental_frequency = frequencies[np.argmax(np.abs(yf))]
+
+    # Amplitude Spectrum
+    amplitude_spectrum = np.abs(yf)[:n//2]
+
+    # Phase Spectrum
+    phase_spectrum = np.angle(yf)[:n//2]
+
+    # Power Spectrum
+    power_spectrum = amplitude_spectrum ** 2
+
+    # Spectral Centroid
+    spectral_centroid = np.sum(frequencies[:n//2] * amplitude_spectrum) / np.sum(amplitude_spectrum)
+
+    # Spectral Spread
+    spectral_spread = np.sqrt(np.sum((frequencies[:n//2] - spectral_centroid)**2 * amplitude_spectrum) / np.sum(amplitude_spectrum))
+
+    # Feature Vector
+    feature_vector = np.concatenate([fundamental_frequency, amplitude_spectrum, phase_spectrum, [power_spectrum.mean(), spectral_centroid, spectral_spread]])
+
+    return feature_vector
 
 def time_domain_characteristics(signal):
     # Convert the signal to a numpy array for computation
@@ -61,7 +51,7 @@ def time_domain_characteristics(signal):
     # autocorrelation (for lag = 1 as example)
     autocorrelation_lag1 = np.sum(signal[:-1] * signal[1:])
 
-    return [
+    return np.array([
         root_mean_sq,
         peak_to_peak,
         crest_factor,
@@ -70,4 +60,4 @@ def time_domain_characteristics(signal):
         power,
         zero_crossing_rate,
         autocorrelation_lag1
-    ]
+    ])
