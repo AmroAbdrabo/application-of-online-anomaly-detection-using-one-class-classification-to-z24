@@ -2,15 +2,15 @@
 import numpy as np
 import sys 
 import pickle
-from keras.models import  load_model
 from scipy import signal
 import matplotlib.pyplot as plt
-from mapminmax import mapminmax_a
+#from mapminmax import mapminmax_a
 import math
 import time
 import pandas as pd
 
 
+"""
 def get_predictions(feat,custom_Name,n_epochs,runDir):
     
     # Load Predictive Model
@@ -39,6 +39,8 @@ def get_predictions(feat,custom_Name,n_epochs,runDir):
 
     
     return(class_prediction,pred_probabilty)
+
+"""
 
 
 def getPSD(sr,data,ch_sel,plt) :
@@ -356,12 +358,20 @@ def get_features(data_raw,sr):
             #print(time.time() - t)
                         
             # 1.6 Moving Average features normalised to mean
-            sta=movingAverage(data_ch_noNans,STAdur)/np.mean(data_ch_noNans) 
+            sta=movingAverage(data_ch_noNans,STAdur)/np.mean(data_ch_noNans)  
             mta=movingAverage(data_ch_noNans,MTAdur)/np.mean(data_ch_noNans)
             lta=movingAverage(data_ch_noNans,LTAdur)/np.mean(data_ch_noNans)              
             # Get the distribution of the short-, medium-, and long-term moving average values
             fig = matplotlib.figure.Figure()
             ax = matplotlib.axes.Axes(fig, (0,0,0,0))
+            # NEW: to prevent error
+            if np.any(np.isinf(sta)):
+                sta = sta[~np.isinf(sta)]
+            if np.any(np.isinf(mta)):
+                mta = mta[~np.isinf(mta)]
+            if np.any(np.isinf(lta)):
+                lta = lta[~np.isinf(lta)]
+
             Pshort = ax.hist(sta,bins=n_bins)[0]
             del ax, fig            
             fig = matplotlib.figure.Figure()
