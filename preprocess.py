@@ -42,3 +42,9 @@ def preprocess(signal):
     high  = 30
     sample_rate = 100
     return standardize_signal(detrended_signal(bandpass_filter(remove_dc_component(signal), low, high, sample_rate)))
+
+def preprocess_without_std(signal):
+    low = 1 
+    high  = 30
+    sample_rate = 100
+    return detrended_signal(bandpass_filter(signal, low, high, sample_rate))
