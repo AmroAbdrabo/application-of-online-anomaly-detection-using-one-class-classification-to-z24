@@ -434,6 +434,8 @@ def get_features(data_raw,sr):
                 #print(time.time() - t)
             except:
                     pass
+            
+    
                 
     # 1.1 Descriptive Statistics [8]
     feat_11=np.concatenate((d_mean[:,None],d_median[:,None],d_mode[:,None],d_std[:,None],d_var[:,None],d_skew[:,None],d_kurt[:,None],d_cov[:,None]),axis=1)  
@@ -456,7 +458,7 @@ def get_features(data_raw,sr):
     #feat_all=np.concatenate((feat_11,feat_12,feat_13,feat_14,feat_15,feat_16,feat_21,feat_22),axis=1)
     feat_all=np.concatenate((feat_11,feat_12,feat_13,feat_14,feat_16,feat_21,feat_22),axis=1)
     #print(time.time() - t)
-
+    print("benchmark **")
     return (feat_all)
 
 
