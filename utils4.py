@@ -120,27 +120,10 @@ def get_features(data_raw,sr):
     import math
 
     def rmsValue(array):
-        n = len(array)
-        squre = 0.0
-        root = 0.0
-        mean = 0.0
-        
-        #calculating Squre
-        for i in range(0, n):
-            squre += (array[i] ** 2)
-        #Calculating Mean
-        mean = (squre/ (float)(n))
-        #Calculating Root
-        root = math.sqrt(mean)
-        return root
+        return np.sqrt(np.mean(array**2))
     
     def nans(data):
-        count = 0
-        for i in data:
-            if not np.isnan(i):
-                count += 1
-        n_nans=len(data)-count
-        return n_nans 
+        return np.sum(np.isnan(data)) 
     
     def movingAverage(data,w):
         #k=np.ones([1,w])/w
