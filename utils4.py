@@ -8,6 +8,27 @@ import matplotlib.pyplot as plt
 import math
 import time
 import pandas as pd
+import os
+import shutil
+
+def save_npy():
+    source_dir = "C:\\Users\\amroa\\Documents\\thesis"
+    target_dir = "C:\\Users\\amroa\\Downloads\\backup_npy"
+
+    # Create the target directory if it doesn't exist
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
+    # Loop through the files in the source directory
+    for filename in os.listdir(source_dir):
+        if filename.endswith(".npy"):
+            source_path = os.path.join(source_dir, filename)
+            target_path = os.path.join(target_dir, filename)
+            
+            # Copy the .npy files to the target directory
+            shutil.copy2(source_path, target_path)
+
+    print("Backup complete!")
 
 
 """
