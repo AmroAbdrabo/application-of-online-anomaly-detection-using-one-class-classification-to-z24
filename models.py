@@ -2,9 +2,9 @@
 The file containing implementations to all of the neural network models used in our experiments. These include a LeNet
 model for MNIST, a VGG model for CIFAR and a multilayer perceptron model for dicriminative active learning, among others.
 """
+# Source: https://github.com/dsgissin/DiscriminativeActiveLearning/ (with edits)
 
 import numpy as np
-
 from keras.callbacks import Callback
 from keras.models import Sequential, Model
 from keras.layers import Dense, Dropout, Flatten, Activation, Input, UpSampling2D
@@ -15,10 +15,13 @@ from keras import backend as K
 from keras.models import load_model
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Model
+from sklearn.mixture import GaussianMixture
+from sklearn.decomposition import PCA
+import sklearn
+from sklearn.neighbors import KNeighborsClassifier
 
 # for the discriminative model
 from xgboost import XGBClassifier
-from sklearn.model_selection import SVC
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -134,7 +137,7 @@ def get_discriminative_model(type = 0):
     """
     The MLP model for discriminative active learning, without any regularization techniques.
     This was changed into a simple SVC. This model discriminates between 0 (unlabeled) and 1 (labeled)
-    type: If 0, SVC. If 1, XGboost, If 2, KNN 
+    type: If 0, SVC. If 1, XGboost, Otherwise, KNN 
     """
     grid_search = None
     if type == 0:
@@ -147,6 +150,35 @@ def get_discriminative_model(type = 0):
         
         # List to store progression of scores
         grid_search = GridSearchCV(SVC(), param_grid, cv=5, n_jobs=-1, scoring='accuracy')
+    elif type == 1:
+        param_grid = {
+                'learning_rate': [0.05, 0.1, 0.3, 1],
+                'max_depth': [3, 5, 7, 10],
+                'min_child_weight': [1, 3, 5],
+                'gamma': [0.1, 0.4, 1, 1.5, 2, 3, 10],
+                'subsample': [0.7, 0.8, 1],
+                'colsample_bytree': [0.2, 0.4, 0.8]
+            }
+        grid_search = GridSearchCV(XGBClassifier(), param_grid, cv=5, n_jobs=-1, scoring='accuracy')
+    else:
+        log_reg = LogisticRegression(C = 12.5) 
+        y = binarize(labels_train)
+        log_reg.fit(X_train, y)
+        sorted_feature_indices = np.argsort(log_reg.coef_[0])[::-1] # get the indices of the most important features in descending order
+
+        # dimensionality reduction (to stabilize KNN and avoid dimensionality curse)
+        pca = PCA(n_components=3, svd_solver = 'auto') 
+        indices = sorted_feature_indices[:79]
+        X_train_pca = pca.fit_transform(X_train[:, indices])
+
+        # hyperparameters to tune
+        param_grid = {
+            'n_neighbors': [1, 2, 3, 5, 11, 15, 21, 31, 41, 51],
+            'p': [1, 2] # 1 = manhattan, 2 = euclidean
+        }
+
+        grid_search = GridSearchCV(KNeighborsClassifier(), param_grid, cv=5, n_jobs=-1, scoring='accuracy')
+
 
     return grid_search
 
@@ -281,186 +313,16 @@ def train_discriminative_model(labeled, unlabeled, input_shape, gpu=1):
     Y_train = np.vstack((y_L, y_U))
     Y_train = to_categorical(Y_train)
 
-    # build the model:
-    model = get_discriminative_model(input_shape)
+    # build the model
+    gmm = GaussianMixture(n_components=2) # 2 components, damage or undamaged
 
-    # train the model:
-    batch_size = 1024
-    if np.max(input_shape) == 28:
-        optimizer = optimizers.Adam(lr=0.0003)
-        epochs = 200
-    elif np.max(input_shape) == 128:
-        # optimizer = optimizers.Adam(lr=0.0003)
-        # epochs = 200
-        batch_size = 128
-        optimizer = optimizers.Adam(lr=0.0001)
-        epochs = 1000 #TODO: was 200
-    elif np.max(input_shape) == 512:
-        optimizer = optimizers.Adam(lr=0.0002)
-        # optimizer = optimizers.RMSprop()
-        epochs = 500
-    elif np.max(input_shape) == 32:
-        optimizer = optimizers.Adam(lr=0.0003)
-        epochs = 500
-    else:
-        optimizer = optimizers.Adam()
-        # optimizer = optimizers.RMSprop()
-        epochs = 1000
-        batch_size = 32
-
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-    callbacks = [DiscriminativeEarlyStopping()]
-    model.fit(X_train, Y_train,
-              epochs=epochs,
-              batch_size=batch_size,
-              shuffle=True,
-              callbacks=callbacks,
-              class_weight={0 : float(X_train.shape[0]) / Y_train[Y_train==0].shape[0],
-                            1 : float(X_train.shape[0]) / Y_train[Y_train==1].shape[0]},
-              verbose=2)
-
-    return model
-
-
-def train_mnist_model(X_train, Y_train, X_validation, Y_validation, checkpoint_path, gpu=1):
-    """
-    A function that trains and returns a LeNet model on the labeled MNIST data.
-    """
-
-    if K.image_data_format() == 'channels_last':
-        input_shape = (28, 28, 1)
-    else:
-        input_shape = (1, 28, 28)
-
-    model = get_LeNet_model(input_shape=input_shape, labels=10)
-    optimizer = optimizers.Adam()
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-    callbacks = [DelayedModelCheckpoint(filepath=checkpoint_path, verbose=1, weights=True)]
-
-    if gpu > 1:
-        gpu_model = ModelMGPU(model, gpus = gpu)
-        gpu_model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        gpu_model.fit(X_train, Y_train,
-                      epochs=150,
-                      batch_size=32,
-                      shuffle=True,
-                      validation_data=(X_validation, Y_validation),
-                      callbacks=callbacks,
-                      verbose=2)
-
-        del model
-        del gpu_model
-
-        model = get_LeNet_model(input_shape=input_shape, labels=10)
-        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        model.load_weights(checkpoint_path)
-        return model
-
-    else:
-        model.fit(X_train, Y_train,
-                  epochs=150,
-                  batch_size=32,
-                  shuffle=True,
-                  validation_data=(X_validation, Y_validation),
-                  callbacks=callbacks,
-                  verbose=2)
-        model.load_weights(checkpoint_path)
-        return model
-
-
-def train_cifar10_model(X_train, Y_train, X_validation, Y_validation, checkpoint_path, gpu=1):
-    """
-    A function that trains and returns a VGG model on the labeled CIFAR-10 data.
-    """
-
-    if K.image_data_format() == 'channels_last':
-        input_shape = (32, 32, 3)
-    else:
-        input_shape = (3, 32, 32)
-
-    model = get_VGG_model(input_shape=input_shape, labels=10)
-    optimizer = optimizers.Adam()
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-    callbacks = [DelayedModelCheckpoint(filepath=checkpoint_path, verbose=1, weights=True)]
-
-    if gpu > 1:
-        gpu_model = ModelMGPU(model, gpus = gpu)
-        gpu_model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        gpu_model.fit(X_train, Y_train,
-                      epochs=400,
-                      batch_size=32,
-                      shuffle=True,
-                      validation_data=(X_validation, Y_validation),
-                      callbacks=callbacks,
-                      verbose=2)
-
-        del gpu_model
-        del model
-
-        model = get_VGG_model(input_shape=input_shape, labels=10)
-        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        model.load_weights(checkpoint_path)
-
-        return model
-
-    else:
-        model.fit(X_train, Y_train,
-                      epochs=400,
-                      batch_size=32,
-                      shuffle=True,
-                      validation_data=(X_validation, Y_validation),
-                      callbacks=callbacks,
-                      verbose=2)
-
-        model.load_weights(checkpoint_path)
-        return model
-
-
-def train_cifar100_model(X_train, Y_train, X_validation, Y_validation, checkpoint_path, gpu=1):
-    """
-    A function that trains and returns a VGG model on the labeled CIFAR-100 data.
-    """
-
-    if K.image_data_format() == 'channels_last':
-        input_shape = (32, 32, 3)
-    else:
-        input_shape = (3, 32, 32)
-
-    model = get_VGG_model(input_shape=input_shape, labels=100)
-    optimizer = optimizers.Adam(lr=0.0001)
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-    callbacks = [DelayedModelCheckpoint(filepath=checkpoint_path, verbose=1, weights=True)]
-
-    if gpu > 1:
-        gpu_model = ModelMGPU(model, gpus = gpu)
-        gpu_model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        gpu_model.fit(X_train, Y_train,
-                      epochs=1000,
-                      batch_size=128,
-                      shuffle=True,
-                      validation_data=(X_validation, Y_validation),
-                      callbacks=callbacks,
-                      verbose=2)
-
-        del gpu_model
-        del model
-
-        model = get_VGG_model(input_shape=input_shape, labels=100)
-        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        model.load_weights(checkpoint_path)
-
-        return model
-
-    else:
-        model.fit(X_train, Y_train,
-                      epochs=1000,
-                      batch_size=128,
-                      shuffle=True,
-                      validation_data=(X_validation, Y_validation),
-                      callbacks=callbacks,
-                      verbose=2)
-
-        model.load_weights(checkpoint_path)
-        return model
+    # Fit the GMM to the data
+    gmm.fit(X_train)
+    
+    # Print the parameters of the trained GMM
+    print(f'Weights: {gmm.weights_}')
+    print(f'Means: {gmm.means_}')
+    print(f'Covariances: {gmm.covariances_}')
+    return gmm
 
 
