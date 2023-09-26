@@ -311,7 +311,7 @@ def train_discriminative_model(labeled, unlabeled, input_shape, gpu=1):
     y_U = np.ones((unlabeled.shape[0],1),dtype='int')
     X_train = np.vstack((labeled, unlabeled))
     Y_train = np.vstack((y_L, y_U))
-    Y_train = to_categorical(Y_train)
+    #Y_train = to_categorical(Y_train)
 
     # build the model
     gmm = GaussianMixture(n_components=2) # 2 components, damage or undamaged
@@ -320,9 +320,9 @@ def train_discriminative_model(labeled, unlabeled, input_shape, gpu=1):
     gmm.fit(X_train)
     
     # Print the parameters of the trained GMM
-    print(f'Weights: {gmm.weights_}')
-    print(f'Means: {gmm.means_}')
-    print(f'Covariances: {gmm.covariances_}')
+    #print(f'Weights: {gmm.weights_}')
+    #print(f'Means: {gmm.means_}')
+    #print(f'Covariances: {gmm.covariances_}')
     return gmm
 
 
