@@ -4,4 +4,12 @@
 visualize.ipynb
 exploratory_data_analysis.ipynb
 *.npy
-*/
+/.ipynb_checkpoints/
+/__pycache__/
+/code/
+/data/
+/environmental/
+/runs/
+/sheartable/
+/shm/
+/Z24/
