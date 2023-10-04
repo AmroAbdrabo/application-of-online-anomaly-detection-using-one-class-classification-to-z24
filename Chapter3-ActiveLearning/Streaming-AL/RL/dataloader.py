@@ -113,6 +113,8 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         print(f"Epochs for {self.channels} channels")
         channel_epochs = []
         nbr_segs = int(new_len // samples_per_epoch) # could also be called nbr_epochs
+
+        # list of length number of channel, where each element is of size (nbr_segs, samples_per_epoch) if transform is identity otherwise each element is of size (nbr_segs, shape of return value of transform on one epoch)
         channels_epochs_sample =  [np.apply_along_axis(self.epoch_transform, axis = 1, arr=  data[i, :].reshape((nbr_segs, samples_per_epoch))  ) for i in range(self.channels)]
 
         # for the labels, we reshape into (nbr_segs or nbr_epochs, samples_)
@@ -121,36 +123,36 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         # we have to deal with heterogeneous rows by taking the majority element
         self.labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels)
 
-        return np.array(channels_epochs_sample)
+        return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples or shape of return value of epoch_transform)
 
     # nbr_epochs is ignored for now (set to 5)
     def get_data_instances(self, samples_per_epoch, nbr_epochs):
-        channels_epochs_sample = self.define_epochs(samples_per_epoch)
-        epoch_sequences_all_channels = [] # double-list, i.e list of 6 lists, where each interior list stores several sequeneces of epochs 
-        for i in range(self.channels):
-            cur_epochs_sample = channels_epochs_sample[i] # get the data for the i'th channel
-            num_epochs = cur_epochs_sample.shape[0]
-            epoch_sequences = [] # stores sequences of epochs in a list
+        channels_epochs_sample = self.define_epochs(samples_per_epoch)  
+        num_epochs = channels_epochs_sample.shape[1] 
+        epoch_sequences = [] # stores sequences of epochs in a list
+        
+        # adapted from https://github.com/AmroAbdrabo/task4/blob/main/CNN.py
+        for i in range(0, num_epochs):
+            if i == 0:
+                epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 0, 1, 2
+            elif i == 1:
+                epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 1, 2, 3
+            elif i == num_epochs - 2:
+                epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+1
+            elif i == num_epochs - 1:
+                epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i, i
+            else:
+                epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+2
             
-            # adapted from https://github.com/AmroAbdrabo/task4/blob/main/CNN.py
-            for i in range(0, num_epochs):
-                if i == 0:
-                    epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 0, 1, 2
-                elif i == 1:
-                    epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 1, 2, 3
-                elif i == num_epochs - 2:
-                    epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+1
-                elif i == num_epochs - 1:
-                    epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i, i
-                else:
-                    epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+2
-                
-                epoch_sequence = np.concatenate((cur_epochs_sample[epoch1], cur_epochs_sample[epoch2], cur_epochs_sample[epoch3], cur_epochs_sample[epoch4], cur_epochs_sample[epoch5]))
-                epoch_sequences.append(epoch_sequence)
-            epoch_sequences_all_channels.append(np.array(epoch_sequences))
-            
-        # shape of dstack is (nbr_epochs, nbr_of_channels, epoch_shape[0]*5, epoch_shape[1]) note the *5 is due to the concatenation above
-        self.instances =  np.stack(epoch_sequences_all_channels, axis = 1)
+            arr = []
+            for j in range(self.channels)
+                cur_epochs_sample = channels_epochs_sample[j] # get the data for the i'th channel
+                arr.append(np.concatenate((cur_epochs_sample[epoch1], cur_epochs_sample[epoch2], cur_epochs_sample[epoch3], cur_epochs_sample[epoch4], cur_epochs_sample[epoch5]))) # shape epoch_shape[0]*5, epoch_shape[1], epoch_shape[2]
+            epochs_all_channel_center_i = np.concatenate(arr) # shape epoch_shape[0]*5*channels, epoch_shape[1], epoch_shape[2], note epoch_shape[2] is RGB information in case we use pcolormesh
+            epoch_sequences.append(epochs_all_channel_center_i.transpose((2, 0, 1))) # RGB channel first since pytorch requires it that way 
+        
+        # shape of dstack is (nbr_epochs, epoch_shapa[2], epoch_shape[0]*5*nbr_channels, epoch_shape[1]) note the *5 is due to the concatenation above and that epoch_shape[2] is most likely 3 for the number of channels in an RGB image
+        self.instances =  np.array(epoch_sequences)
 
     def __len__(self):
         return self.instances.shape[0]
