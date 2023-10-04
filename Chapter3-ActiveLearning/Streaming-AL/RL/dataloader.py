@@ -3,10 +3,13 @@ import numpy as np
 import pandas as pd
 from scipy.signal import butter, lfilter, filtfilt
 from scipy.signal import detrend
+from torch.utils.data import Dataset, DataLoader
+import torch
 
-class DataLoader:
+class CustomDataLoader:
     def __init__(self, channels, epoch_transform, path):
         self.instances = None
+        self.labels = None
         self.samples_by_channel = None # set by get_samples_by_channel
         self.samples = None
         self.channels = channels
@@ -38,7 +41,12 @@ class DataLoader:
         y = filtfilt(b, a, data)
         return y
 
-class ShearBuildingLoader(DataLoader):
+
+
+
+# Dataset for shear building        
+
+class ShearBuildingLoader(Dataset, CustomDataLoader):
     def __init__(self, epoch_transform):
         super().__init__(6, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
 
@@ -86,12 +94,9 @@ class ShearBuildingLoader(DataLoader):
         # save for later
         self.samples_by_channel = np.vstack((data_dam, data_und))
 
-        return self.samples_by_channel
-        
-
     def defines_epochs(self, samples_per_epoch)
         if self.samples_by_channel is None:
-            get_samples_by_channel(self)
+            self.get_samples_by_channel()
 
         data = self.samples_by_channel[:, :-1]
 
@@ -114,15 +119,15 @@ class ShearBuildingLoader(DataLoader):
         labels = (self.samples_by_channel[:, -1]).reshape((nbr_segs, samples_per_epoch))
 
         # we have to deal with heterogeneous rows by taking the majority element
-        labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels)
+        self.labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels)
 
-        return np.array(channels_epochs_sample), labels
+        return np.array(channels_epochs_sample)
 
-
-    def get_data_instances(self, samples_per_epoch):
-        channels_epochs_sample, labels = self.define_epochs(samples_per_epoch)
-        epoch_sequences_all_channels = [] # double-list, i.e list of list, where each interior list stores several sequeneces of epochs 
-        for i in range(self.channels)
+    # nbr_epochs is ignored for now (set to 5)
+    def get_data_instances(self, samples_per_epoch, nbr_epochs):
+        channels_epochs_sample = self.define_epochs(samples_per_epoch)
+        epoch_sequences_all_channels = [] # double-list, i.e list of 6 lists, where each interior list stores several sequeneces of epochs 
+        for i in range(self.channels):
             cur_epochs_sample = channels_epochs_sample[i] # get the data for the i'th channel
             num_epochs = cur_epochs_sample.shape[0]
             epoch_sequences = [] # stores sequences of epochs in a list
@@ -144,10 +149,11 @@ class ShearBuildingLoader(DataLoader):
                 epoch_sequences.append(epoch_sequence)
             epoch_sequences_all_channels.append(np.array(epoch_sequences))
             
-        # shape is (nbr_epochs, epoch_size, nbr_of_channels)
-        return np.dstack(epoch_sequences_all_channels)
+        # shape of dstack is (nbr_epochs, nbr_of_channels, epoch_shape[0]*5, epoch_shape[1]) note the *5 is due to the concatenation above
+        self.instances =  np.stack(epoch_sequences_all_channels, axis = 1)
 
+    def __len__(self):
+        return self.instances.shape[0]
 
-
-
-
+    def __getitem__(self, data):
+        return self.instances[i], self.labels[i]
