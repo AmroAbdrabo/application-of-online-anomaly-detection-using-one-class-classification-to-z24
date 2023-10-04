@@ -5,11 +5,12 @@ from scipy.signal import butter, lfilter, filtfilt
 from scipy.signal import detrend
 
 class DataLoader:
-    def __init__(self, channels, path):
+    def __init__(self, channels, epoch_transform, path):
         self.instances = None
         self.samples_by_channel = None # set by get_samples_by_channel
         self.samples = None
         self.channels = channels
+        self.epoch_transform = None
         self.path = path
 
     # constructs an (N, d + 1) array where N is the number of samples and d is the number of channels. The last column is for the label
@@ -20,8 +21,12 @@ class DataLoader:
     def defines_epochs(self, samples_per_epoch)
         pass
 
-    # constructs an array of size (N//s, a*s) where a is the number of desired epochs per instance 
-    def get_data_instances(self)
+    # optional: do transformations on each epoch
+    def transform_epochs(self, epoch):
+        pass
+
+    # constructs an array of size (N//s, a*s) where a is the number of desired epochs per instance. nbr_epochs is the number of epochs to use for one instance
+    def get_data_instances(self, samples_per_epoch, nbr_epochs)
         pass
 
     @staticmethod
@@ -34,8 +39,8 @@ class DataLoader:
         return y
 
 class ShearBuildingLoader(DataLoader):
-    def __init__(self):
-        super().__init__(6, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
+    def __init__(self, epoch_transform):
+        super().__init__(6, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
 
     def get_samples_by_channels(self):
         # check first if result was already computed
@@ -88,18 +93,59 @@ class ShearBuildingLoader(DataLoader):
         if self.samples_by_channel is None:
             get_samples_by_channel(self)
 
-        data = self.samples_by_channel
+        data = self.samples_by_channel[:, :-1]
 
         # define a wraparound in case the samples per epoch do not evenly divide the number of samples
-        nbr_samples = len(data)
-        wraparound_amt = nbr_samples % samples_per_epoch
+        nbr_samples = data.shape[0]
+        wraparound_amt = samples_per_epoch - (nbr_samples % samples_per_epoch)
+        new_len = nbr_samples + wraparound_amt
 
         if wraparound_amt != 0:
             wraparound = self.samples_by_channels[0:wraparound_amt, :]
             data = np.vstack(( data, wraparound ))
 
-        # now that the wraparound part is done
+        # now that the wraparound part is done, we reshape into the data into desired epochs 
+        print(f"Epochs for {self.channels} channels")
+        channel_epochs = []
+        nbr_segs = int(new_len // samples_per_epoch) # could also be called nbr_epochs
+        channels_epochs_sample =  [np.apply_along_axis(self.epoch_transform, axis = 1, arr=  data[i, :].reshape((nbr_segs, samples_per_epoch))  ) for i in range(self.channels)]
 
+        # for the labels, we reshape into (nbr_segs or nbr_epochs, samples_)
+        labels = (self.samples_by_channel[:, -1]).reshape((nbr_segs, samples_per_epoch))
+
+        # we have to deal with heterogeneous rows by taking the majority element
+        labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels)
+
+        return np.array(channels_epochs_sample), labels
+
+
+    def get_data_instances(self, samples_per_epoch):
+        channels_epochs_sample, labels = self.define_epochs(samples_per_epoch)
+        epoch_sequences_all_channels = [] # double-list, i.e list of list, where each interior list stores several sequeneces of epochs 
+        for i in range(self.channels)
+            cur_epochs_sample = channels_epochs_sample[i] # get the data for the i'th channel
+            num_epochs = cur_epochs_sample.shape[0]
+            epoch_sequences = [] # stores sequences of epochs in a list
+            
+            # adapted from https://github.com/AmroAbdrabo/task4/blob/main/CNN.py
+            for i in range(0, num_epochs):
+                if i == 0:
+                    epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 0, 1, 2
+                elif i == 1:
+                    epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 1, 2, 3
+                elif i == num_epochs - 2:
+                    epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+1
+                elif i == num_epochs - 1:
+                    epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i, i
+                else:
+                    epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+2
+                
+                epoch_sequence = np.concatenate((cur_epochs_sample[epoch1], cur_epochs_sample[epoch2], cur_epochs_sample[epoch3], cur_epochs_sample[epoch4], cur_epochs_sample[epoch5]))
+                epoch_sequences.append(epoch_sequence)
+            epoch_sequences_all_channels.append(np.array(epoch_sequences))
+            
+        # shape is (nbr_epochs, epoch_size, nbr_of_channels)
+        return np.dstack(epoch_sequences_all_channels)
 
 
 
