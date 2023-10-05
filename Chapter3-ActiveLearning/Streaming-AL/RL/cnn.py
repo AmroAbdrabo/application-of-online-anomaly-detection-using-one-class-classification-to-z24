@@ -2,6 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import torch.optim as optim
 from dataloader import ShearBuildingLoader
 
 class CustomResNet(nn.Module):
@@ -67,16 +68,37 @@ def pcolormesh_to_array(quadmesh):
 
     return img_array
 
-if __name__ == "__main__"
+if __name__ == "__main__":
     # function to transform an epoch of acceelration of the shearr buidling
     def transform_epoch_shearbuilding(epoch):
         # calculate the spectrogram
         fs = 4096
-        f, t_spec, Sxx = spectrogram(y, fs)
+        f, t_spec, Sxx = spectrogram(epoch, fs)
         
         # select subplot
-        plt.pcolormesh(t_spec, f, 10*np.log10(Sxx), shading = 'gouraud')
+        quadmesh = plt.pcolormesh(t_spec, f, 10*np.log10(Sxx), shading = 'gouraud')
+        return pcolormesh_to_array(quadmesh)
 
     # Create the dataset and dataloader
-    dataset = ShearBuildingLoader(data, labels)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    dataset = ShearBuildingLoader(transform_epoch_shearbuilding)
+    dataset.get_data_instances(16384, 5) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
+
+    # Initialize the model and optimizer
+    model = CustomResNet(version="50", num_classes=10)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    criterion = nn.CrossEntropyLoss()
+
+    # Training loop (here epochs, refers to a complete pass through the data, not the signal variant which refers to a segment of acceleration data)
+    num_epochs = 10
+    for epoch in range(num_epochs):
+        for batch in dataloader:
+            inputs, labels = batch
+
+            optimizer.zero_grad()
+            
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            
+            loss.backward()
+            optimizer.step()

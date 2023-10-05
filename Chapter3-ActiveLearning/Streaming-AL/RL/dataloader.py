@@ -5,6 +5,7 @@ from scipy.signal import butter, lfilter, filtfilt
 from scipy.signal import detrend
 from torch.utils.data import Dataset, DataLoader
 import torch
+import os
 
 class CustomDataLoader:
     def __init__(self, channels, epoch_transform, path):
@@ -17,11 +18,11 @@ class CustomDataLoader:
         self.path = path
 
     # constructs an (N, d + 1) array where N is the number of samples and d is the number of channels. The last column is for the label
-    def get_samples_by_channels(self)
+    def get_samples_by_channels(self):
         pass
 
     # constructs and returns an array of size (d, (N//s, s)) where d is nbr of channels, s is the samples_per_epoch and N is the number of samples in a channel  
-    def defines_epochs(self, samples_per_epoch)
+    def define_epochs(self, samples_per_epoch):
         pass
 
     # optional: do transformations on each epoch
@@ -29,7 +30,7 @@ class CustomDataLoader:
         pass
 
     # constructs an array of size (N//s, a*s) where a is the number of desired epochs per instance. nbr_epochs is the number of epochs to use for one instance
-    def get_data_instances(self, samples_per_epoch, nbr_epochs)
+    def get_data_instances(self, samples_per_epoch, nbr_epochs):
         pass
 
     @staticmethod
@@ -94,9 +95,9 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         # save for later
         self.samples_by_channel = np.vstack((data_dam, data_und))
 
-    def defines_epochs(self, samples_per_epoch)
+    def define_epochs(self, samples_per_epoch):
         if self.samples_by_channel is None:
-            self.get_samples_by_channel()
+            self.get_samples_by_channels()
 
         data = self.samples_by_channel[:, :-1]
 
@@ -145,7 +146,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
                 epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+2
             
             arr = []
-            for j in range(self.channels)
+            for j in range(self.channels):
                 cur_epochs_sample = channels_epochs_sample[j] # get the data for the i'th channel
                 arr.append(np.concatenate((cur_epochs_sample[epoch1], cur_epochs_sample[epoch2], cur_epochs_sample[epoch3], cur_epochs_sample[epoch4], cur_epochs_sample[epoch5]))) # shape epoch_shape[0]*5, epoch_shape[1], epoch_shape[2]
             epochs_all_channel_center_i = np.concatenate(arr) # shape epoch_shape[0]*5*channels, epoch_shape[1], epoch_shape[2], note epoch_shape[2] is RGB information in case we use pcolormesh
