@@ -78,7 +78,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
 
         # convert to numpy
         damaged_np = damaged.to_numpy()
-        undamged_np = undamaged.to_numpy()
+        undamaged_np = undamaged.to_numpy()
 
         # nbr of damage and healthy cases
         nbr_dam = damaged_np.shape[0]
@@ -86,7 +86,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
 
         # labels
         labels_dam = np.ones(nbr_dam).reshape(nbr_dam, -1)
-        labsls_und = np.zeros(nbr_und).reshape(nbr_und, -1)
+        labels_und = np.zeros(nbr_und).reshape(nbr_und, -1)
 
         # concatenate labels to data horizontally
         data_dam    = np.hstack((damaged_np,   labels_dam))
@@ -112,7 +112,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
 
         # now that the wraparound part is done, we reshape into the data into desired epochs 
         print(f"Epochs for {self.channels} channels")
-        channel_epochs = []
+        
         nbr_segs = int(new_len // samples_per_epoch) # could also be called nbr_epochs
 
         # list of length number of channel, where each element is of size (nbr_segs, samples_per_epoch) if transform is identity otherwise each element is of size (nbr_segs, shape of return value of transform on one epoch)

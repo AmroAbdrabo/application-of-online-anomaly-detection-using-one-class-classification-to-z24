@@ -4,6 +4,9 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
 from dataloader import ShearBuildingLoader
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import signal
 
 class CustomResNet(nn.Module):
     def __init__(self, version="18", num_classes=1000):
@@ -73,7 +76,7 @@ if __name__ == "__main__":
     def transform_epoch_shearbuilding(epoch):
         # calculate the spectrogram
         fs = 4096
-        f, t_spec, Sxx = spectrogram(epoch, fs)
+        f, t_spec, Sxx = signal.spectrogram(epoch, fs)
         
         # select subplot
         quadmesh = plt.pcolormesh(t_spec, f, 10*np.log10(Sxx), shading = 'gouraud')
