@@ -28,7 +28,7 @@ class CustomResNet(nn.Module):
         self.features = nn.Sequential(*list(resnet.children())[:-1])
         
         # Create a new fully connected layer
-        self.fc = nn.Linear(6 * (1 if version == "50" else 1), num_classes)
+        self.fc = nn.Linear(512 * (4 if version == "50" else 1), num_classes)
     
     def forward(self, x):
         x = self.features(x)
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
     # Initialize the model and optimizer
-    model = CustomResNet(version="50", num_classes=2)
+    model = CustomResNet(version="50", num_classes=2).double()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
 

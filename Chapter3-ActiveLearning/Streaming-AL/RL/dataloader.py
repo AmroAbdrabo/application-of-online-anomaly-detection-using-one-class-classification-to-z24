@@ -69,7 +69,8 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
             for filename2 in file_list2:
                 df = pd.read_excel(os.path.join(full_path, filename2), index_col=None, header=list(range(11))) 
                 detrended_df = df.apply(lambda x: detrend(x), axis=0)   # bandpass filtering to 50 Hz completely removed the data so it will not be done
-                filtered_df = detrended_df.apply(lambda x: CustomDataLoader.bandpass_filter(x, 1, 100, 4096), axis=0) # introduces too many nans
+                #filtered_df = detrended_df.apply(lambda x: CustomDataLoader.bandpass_filter(x, 1, 100, 4096), axis=0) # introduces too many nans
+                filtered_df = detrended_df
                 filtered_df.columns = range(7) # ignore column names to avoid problems later
                 filtered_df = filtered_df.drop(columns=filtered_df.columns[0]) # make sure to drop time as it is not needed
                 dfs[idx].append(filtered_df)
@@ -79,8 +80,8 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         undamaged = pd.concat(dfs[1], axis=0, ignore_index=True)
 
         # convert to numpy
-        damaged_np = damaged.to_numpy()
-        undamaged_np = undamaged.to_numpy()
+        damaged_np = damaged.astype(np.float64).to_numpy()
+        undamaged_np = undamaged.astype(np.float64).to_numpy()
 
         print(damaged_np.shape)
         print(undamaged_np.shape)
@@ -129,7 +130,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         labels = (self.samples_by_channel[:, -1]).reshape((nbr_segs, samples_per_epoch))
 
         # we have to deal with heterogeneous rows by taking the majority element
-        self.labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels)
+        self.labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels).astype(np.int64)
 
         return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples or shape of return value of epoch_transform)
 
@@ -160,7 +161,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
             epoch_sequences.append(epochs_all_channel_center_i.transpose((2, 0, 1))) # RGB channel first since pytorch requires it that way 
         
         # shape of dstack is (nbr_epochs, epoch_shapa[2], epoch_shape[0]*5*nbr_channels, epoch_shape[1]) note the *5 is due to the concatenation above and that epoch_shape[2] is most likely 3 for the number of channels in an RGB image
-        self.instances =  np.array(epoch_sequences)
+        self.instances =  np.array(epoch_sequences).astype(np.float64)
 
     def __len__(self):
         return self.instances.shape[0]
