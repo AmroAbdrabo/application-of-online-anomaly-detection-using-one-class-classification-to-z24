@@ -69,7 +69,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
             for filename2 in file_list2:
                 df = pd.read_excel(os.path.join(full_path, filename2), index_col=None, header=list(range(11))) 
                 detrended_df = df.apply(lambda x: detrend(x), axis=0)   # bandpass filtering to 50 Hz completely removed the data so it will not be done
-                filtered_df = detrended_df.apply(lambda x: bandpass_filter(x, 1, 100, 4096), axis=0) # introduces too many nans
+                filtered_df = detrended_df.apply(lambda x: CustomDataLoader.bandpass_filter(x, 1, 100, 4096), axis=0) # introduces too many nans
                 dfs[idx].append(filtered_df)
         
         # concatenate all the damaged cases together and then all the undamaged cases together
