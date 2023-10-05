@@ -164,5 +164,5 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
     def __len__(self):
         return self.instances.shape[0]
 
-    def __getitem__(self, data):
-        return self.instances[i], self.labels[i]
+    def __getitem__(self, idx):
+        return self.instances[idx], self.labels[idx]
