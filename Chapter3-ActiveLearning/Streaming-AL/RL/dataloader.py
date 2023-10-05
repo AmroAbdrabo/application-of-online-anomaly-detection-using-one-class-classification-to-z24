@@ -70,6 +70,8 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
                 df = pd.read_excel(os.path.join(full_path, filename2), index_col=None, header=list(range(11))) 
                 detrended_df = df.apply(lambda x: detrend(x), axis=0)   # bandpass filtering to 50 Hz completely removed the data so it will not be done
                 filtered_df = detrended_df.apply(lambda x: CustomDataLoader.bandpass_filter(x, 1, 100, 4096), axis=0) # introduces too many nans
+                filtered_df.columns = range(7) # ignore column names to avoid problems later
+                filtered_df = filtered_df.drop(columns=filtered_df.columns[0]) # make sure to drop time as it is not needed
                 dfs[idx].append(filtered_df)
         
         # concatenate all the damaged cases together and then all the undamaged cases together
@@ -79,6 +81,9 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         # convert to numpy
         damaged_np = damaged.to_numpy()
         undamaged_np = undamaged.to_numpy()
+
+        print(damaged_np.shape)
+        print(undamaged_np.shape)
 
         # nbr of damage and healthy cases
         nbr_dam = damaged_np.shape[0]
@@ -91,7 +96,8 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         # concatenate labels to data horizontally
         data_dam    = np.hstack((damaged_np,   labels_dam))
         data_und  =   np.hstack((undamaged_np, labels_und))
-
+        print(data_dam.shape)
+        print(data_und.shape)
         # save for later
         self.samples_by_channel = np.vstack((data_dam, data_und))
 
