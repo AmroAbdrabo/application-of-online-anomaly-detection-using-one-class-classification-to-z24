@@ -52,8 +52,8 @@ def pcolormesh_to_array(quadmesh):
     data_array = quadmesh.get_array().data
 
     # Get the number of rows and columns
-    nrows = quadmesh._meshHeight  
-    ncols = quadmesh._meshWidth 
+    nrows = quadmesh.get_coordinates().shape[0] - 1
+    ncols = quadmesh.get_coordinates().shape[1] - 1
     
 
     # Convert the 1D array back to the original 2D shape

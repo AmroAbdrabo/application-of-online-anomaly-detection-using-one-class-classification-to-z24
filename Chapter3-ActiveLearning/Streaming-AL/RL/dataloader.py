@@ -14,7 +14,7 @@ class CustomDataLoader:
         self.samples_by_channel = None # set by get_samples_by_channel
         self.samples = None
         self.channels = channels
-        self.epoch_transform = None
+        self.epoch_transform = epoch_transform
         self.path = path
 
     # constructs an (N, d + 1) array where N is the number of samples and d is the number of channels. The last column is for the label
@@ -123,7 +123,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         nbr_segs = int(new_len // samples_per_epoch) # could also be called nbr_epochs
 
         # list of length number of channel, where each element is of size (nbr_segs, samples_per_epoch) if transform is identity otherwise each element is of size (nbr_segs, shape of return value of transform on one epoch)
-        channels_epochs_sample =  [np.apply_along_axis(self.epoch_transform, axis = 1, arr=  data[i, :].reshape((nbr_segs, samples_per_epoch))  ) for i in range(self.channels)]
+        channels_epochs_sample =  [np.apply_along_axis(self.epoch_transform, axis = 1, arr=  data[:, i].reshape((nbr_segs, samples_per_epoch))  ) for i in range(self.channels)]
 
         # for the labels, we reshape into (nbr_segs or nbr_epochs, samples_)
         labels = (self.samples_by_channel[:, -1]).reshape((nbr_segs, samples_per_epoch))
