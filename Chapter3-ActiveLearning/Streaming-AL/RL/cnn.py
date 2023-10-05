@@ -5,6 +5,8 @@ import torchvision.models as models
 import torch.optim as optim
 from dataloader import ShearBuildingLoader
 import matplotlib.pyplot as plt
+from torchvision.models import ResNet50_Weights, ResNet18_Weights
+import torch.nn.functional as F
 import numpy as np
 from scipy import signal
 
@@ -17,9 +19,9 @@ class CustomResNet(nn.Module):
         
         # Load pre-trained ResNet (for other layers)
         if version == "18":
-            resnet = models.resnet18(pretrained=False)
+            resnet = models.resnet18(weights=ResNet18_Weights.DEFAULT)
         else:
-            resnet = models.resnet50(pretrained=False)
+            resnet = models.resnet50(weights=ResNet50_Weights.DEFAULT)
             
         # Replace the first convolutional layer in the pre-trained model with our 6-channel one
         resnet.conv1 = self.conv1
@@ -92,9 +94,16 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
 
-    # Training loop (here epochs, refers to a complete pass through the data, not the signal variant which refers to a segment of acceleration data)
+    epoch_losses = []
+    epoch_accuracies = []
+
+    # Training loop
     num_epochs = 10
     for epoch in range(num_epochs):
+        running_loss = 0.0
+        correct_predictions = 0
+        total_predictions = 0
+        
         for batch in dataloader:
             inputs, labels = batch
 
@@ -105,3 +114,29 @@ if __name__ == "__main__":
             
             loss.backward()
             optimizer.step()
+
+            # Accumulate the loss
+            running_loss += loss.item()
+
+            # Get predictions from the maximum value
+            _, predicted = torch.max(F.softmax(outputs, dim=1), 1)
+            correct_predictions += (predicted == labels).sum().item()
+            total_predictions += labels.size(0)
+
+        # Calculate average loss and accuracy
+        average_loss = running_loss / len(dataloader)
+        accuracy = 100 * correct_predictions / total_predictions
+        
+        # Store the loss and accuracy
+        epoch_losses.append(average_loss)
+        epoch_accuracies.append(accuracy)
+
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}, Accuracy: {accuracy:.2f}%")
+
+    # Plotting accuracy as function of epoch
+    plt.plot(epoch_accuracies)
+    plt.title('Accuracy as function of epoch')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.grid(True)
+    plt.show()
