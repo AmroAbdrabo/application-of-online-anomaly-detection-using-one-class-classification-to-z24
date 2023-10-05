@@ -9,11 +9,11 @@ import numpy as np
 from scipy import signal
 
 class CustomResNet(nn.Module):
-    def __init__(self, version="18", num_classes=1000):
+    def __init__(self, version="18", num_classes=2):
         super(CustomResNet, self).__init__()
         
         # Define the first conv layer
-        self.conv1 = nn.Conv2d(6, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         
         # Load pre-trained ResNet (for other layers)
         if version == "18":
@@ -28,7 +28,7 @@ class CustomResNet(nn.Module):
         self.features = nn.Sequential(*list(resnet.children())[:-1])
         
         # Create a new fully connected layer
-        self.fc = nn.Linear(512 * (4 if version == "50" else 1), num_classes)
+        self.fc = nn.Linear(6 * (1 if version == "50" else 1), num_classes)
     
     def forward(self, x):
         x = self.features(x)
@@ -52,8 +52,8 @@ def pcolormesh_to_array(quadmesh):
     data_array = quadmesh.get_array().data
 
     # Get the number of rows and columns
-    nrows = quadmesh.get_coordinates().shape[0] - 1
-    ncols = quadmesh.get_coordinates().shape[1] - 1
+    nrows = quadmesh.get_coordinates().shape[0] 
+    ncols = quadmesh.get_coordinates().shape[1] 
     
 
     # Convert the 1D array back to the original 2D shape
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
     # Initialize the model and optimizer
-    model = CustomResNet(version="50", num_classes=10)
+    model = CustomResNet(version="50", num_classes=2)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
 
