@@ -113,7 +113,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         new_len = nbr_samples + wraparound_amt
 
         if wraparound_amt != 0:
-            wraparound = self.samples_by_channels[0:wraparound_amt, :]
+            wraparound = self.samples_by_channel[0:wraparound_amt, :]
             data = np.vstack(( data, wraparound ))
 
         # now that the wraparound part is done, we reshape into the data into desired epochs 
