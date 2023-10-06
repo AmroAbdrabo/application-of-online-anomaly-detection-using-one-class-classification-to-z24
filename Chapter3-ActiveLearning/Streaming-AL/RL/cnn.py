@@ -85,17 +85,32 @@ if __name__ == "__main__":
         return pcolormesh_to_array(quadmesh)
 
     # Create the dataset and dataloader
-    dataset = ShearBuildingLoader(transform_epoch_shearbuilding)
-    dataset.get_data_instances(16384, 5) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
-    dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
+    dataset_train = ShearBuildingLoader(transform_epoch_shearbuilding)
+    dataset_train.get_data_instances(True, 16384, 5) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
+
+    dataset_test = ShearBuildingLoader(transform_epoch_shearbuilding)
+    dataset_test.get_data_instances(False, 16384, 5) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
+
+
+    torch.cuda.empty_cache()
+    train_dataloader = DataLoader(dataset_train, batch_size=4, shuffle=True)
+    test_dataloader = DataLoader(dataset_test, batch_size=4, shuffle=True)
+
 
     # Initialize the model and optimizer
     model = CustomResNet(version="50", num_classes=2).double()
+    print("CUDA availability")
+    print(torch.cuda.is_available())
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
 
+    model.to(device)
+
     epoch_losses = []
-    epoch_accuracies = []
+    epoch_accuracies = [] # training accuracies
+    test_accuracies = [] # test accuracies
+    
 
     # Training loop
     num_epochs = 10
@@ -104,8 +119,11 @@ if __name__ == "__main__":
         correct_predictions = 0
         total_predictions = 0
         
-        for batch in dataloader:
+        for batch in train_dataloader:
             inputs, labels = batch
+
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
             optimizer.zero_grad()
             
@@ -122,9 +140,25 @@ if __name__ == "__main__":
             _, predicted = torch.max(F.softmax(outputs, dim=1), 1)
             correct_predictions += (predicted == labels).sum().item()
             total_predictions += labels.size(0)
+        
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            
+            for inputs, labels in test_dataloader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+                
+        test_accuracy = 100 * correct / total
+        test_accuracies.append(test_accuracy)
+        print(f"Epoch {epoch+1}/{num_epochs}, Test Accuracy: {test_accuracy:.2f}%")
 
         # Calculate average loss and accuracy
-        average_loss = running_loss / len(dataloader)
+        average_loss = running_loss / len(train_dataloader)
         accuracy = 100 * correct_predictions / total_predictions
         
         # Store the loss and accuracy
@@ -133,10 +167,18 @@ if __name__ == "__main__":
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}, Accuracy: {accuracy:.2f}%")
 
+    torch.save(model.state_dict(), 'model_weights.pth')
+
     # Plotting accuracy as function of epoch
-    plt.plot(epoch_accuracies)
-    plt.title('Accuracy as function of epoch')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy (%)')
-    plt.grid(True)
+    plt.clf() # to clear 
+    fig, ax = plt.subplots()
+    ax.plot(np.arange(num_epochs), epoch_accuracies, label='train', color='blue')
+    ax.plot(np.arange(num_epochs), test_accuracies,  label='test', color='red')
+
+    # Add labels, title, legend, and display the plot
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Accuracy')
+    ax.set_title('Accuracy vs Epoch')
+    ax.legend()
+    ax.grid(True)
     plt.show()

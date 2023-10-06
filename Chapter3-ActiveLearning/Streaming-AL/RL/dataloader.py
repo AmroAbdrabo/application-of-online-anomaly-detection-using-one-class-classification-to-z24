@@ -135,7 +135,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples or shape of return value of epoch_transform)
 
     # nbr_epochs is ignored for now (set to 5)
-    def get_data_instances(self, samples_per_epoch, nbr_epochs):
+    def get_data_instances(self, train, samples_per_epoch, nbr_epochs):
         channels_epochs_sample = self.define_epochs(samples_per_epoch)  
         num_epochs = channels_epochs_sample.shape[1] 
         epoch_sequences = [] # stores sequences of epochs in a list
@@ -160,8 +160,21 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
             epochs_all_channel_center_i = np.concatenate(arr) # shape epoch_shape[0]*5*channels, epoch_shape[1], epoch_shape[2], note epoch_shape[2] is RGB information in case we use pcolormesh
             epoch_sequences.append(epochs_all_channel_center_i.transpose((2, 0, 1))) # RGB channel first since pytorch requires it that way 
         
-        # shape of dstack is (nbr_epochs, epoch_shapa[2], epoch_shape[0]*5*nbr_channels, epoch_shape[1]) note the *5 is due to the concatenation above and that epoch_shape[2] is most likely 3 for the number of channels in an RGB image
+        # shape of instances is (nbr_epochs, epoch_shapa[2], epoch_shape[0]*5*nbr_channels, epoch_shape[1]) note the *5 is due to the concatenation above and that epoch_shape[2] is most likely 3 for the number of channels in an RGB image
+        np.random.seed(42)
         self.instances =  np.array(epoch_sequences).astype(np.float64)
+        nbr_inst = self.instances.shape[0]
+        num_elements = int(0.7 * nbr_inst) # for training data we use 70%
+        if train:
+            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
+            subset_train = self.instances[selected_indices]
+            self.instances = subset_train
+        else:
+            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
+            # get the numbers not in selected_indices
+            not_selected = np.setdiff1d(np.arange(nbr_inst), selected_indices)
+            subset_test = self.instances[not_selected]
+            self.instances = subset_test
 
     def __len__(self):
         return self.instances.shape[0]
