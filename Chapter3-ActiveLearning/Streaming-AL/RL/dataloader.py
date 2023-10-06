@@ -41,9 +41,12 @@ class CustomDataLoader:
         b, a = butter(order, [low, high], btype='band')
         y = filtfilt(b, a, data)
         return y
-
-
-
+    
+    @staticmethod # calculates indices of consecutive epochs
+    def get_epoch_positions(i, nbr_epochs, tot_epochs):
+            left_indices  = [max(i - el, 0) for el in range(1, int(nbr_epochs//2))]
+            right_indices = [min(i + el, tot_epochs - 1) for el in range(int(nbr_epochs//2))] # includes i also
+            return left_indices + right_indices
 
 # Dataset for shear building        
 
@@ -52,6 +55,11 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         super().__init__(6, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
 
     def get_samples_by_channels(self):
+        try:
+            shear_build_samp_by_chnl = np.load("shear_build_samp_by_chnl.npy")
+            self.samples_by_channel = shear_build_samp_by_chnl
+        except:
+            print("Could not read pickled shear_build_samp_by_chnl.npy")
         # check first if result was already computed
         if not (self.samples_by_channel is None):
             return self.samples_by_channel
@@ -99,8 +107,10 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         data_und  =   np.hstack((undamaged_np, labels_und))
         print(data_dam.shape)
         print(data_und.shape)
-        # save for later
+        
         self.samples_by_channel = np.vstack((data_dam, data_und))
+        # save for later
+        np.save("shear_build_samp_by_chnl.npy", self.samples_by_channel)
 
     def define_epochs(self, samples_per_epoch):
         if self.samples_by_channel is None:
@@ -134,29 +144,20 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
 
         return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples or shape of return value of epoch_transform)
 
-    # nbr_epochs is ignored for now (set to 5)
+    # nbr_epochs is ignored for now (set to 5). nbr_epochs should be odd
     def get_data_instances(self, train, samples_per_epoch, nbr_epochs):
-        channels_epochs_sample = self.define_epochs(samples_per_epoch)  
+
+        channels_epochs_sample = self.define_epochs(samples_per_epoch) # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
         num_epochs = channels_epochs_sample.shape[1] 
         epoch_sequences = [] # stores sequences of epochs in a list
         
         # adapted from https://github.com/AmroAbdrabo/task4/blob/main/CNN.py
         for i in range(0, num_epochs):
-            if i == 0:
-                epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 0, 1, 2
-            elif i == 1:
-                epoch1, epoch2, epoch3, epoch4, epoch5 = 0, 0, 1, 2, 3
-            elif i == num_epochs - 2:
-                epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+1
-            elif i == num_epochs - 1:
-                epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i, i
-            else:
-                epoch1, epoch2, epoch3, epoch4, epoch5 = i-2, i-1, i, i+1, i+2
-            
+            conseutive_epoch_indices = CustomDataLoader.get_epoch_positions(i, nbr_epochs, tot_epochs = num_epochs) # nbr_epochs is the number of consecutive epochs to consider for each instance
             arr = []
             for j in range(self.channels):
                 cur_epochs_sample = channels_epochs_sample[j] # get the data for the i'th channel
-                arr.append(np.concatenate((cur_epochs_sample[epoch1], cur_epochs_sample[epoch2], cur_epochs_sample[epoch3], cur_epochs_sample[epoch4], cur_epochs_sample[epoch5]))) # shape epoch_shape[0]*5, epoch_shape[1], epoch_shape[2]
+                arr.append(np.concatenate([cur_epochs_sample[ep] for ep in conseutive_epoch_indices])) # shape epoch_shape[0]*5, epoch_shape[1], epoch_shape[2]
             epochs_all_channel_center_i = np.concatenate(arr) # shape epoch_shape[0]*5*channels, epoch_shape[1], epoch_shape[2], note epoch_shape[2] is RGB information in case we use pcolormesh
             epoch_sequences.append(epochs_all_channel_center_i.transpose((2, 0, 1))) # RGB channel first since pytorch requires it that way 
         
