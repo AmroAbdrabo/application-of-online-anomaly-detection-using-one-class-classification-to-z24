@@ -44,9 +44,9 @@ class CustomDataLoader:
     
     @staticmethod # calculates indices of consecutive epochs
     def get_epoch_positions(i, nbr_epochs, tot_epochs):
-            left_indices  = [max(i - el, 0) for el in range(1, int(nbr_epochs//2))]
-            right_indices = [min(i + el, tot_epochs - 1) for el in range(int(nbr_epochs//2))] # includes i also
-            return left_indices + right_indices
+        left_indices  = [max(i - el, 0) for el in range(1, int(nbr_epochs//2))]
+        right_indices = [min(i + el, tot_epochs - 1) for el in range(int(nbr_epochs//2))] # includes i also
+        return left_indices + right_indices
 
 # Dataset for shear building        
 
@@ -107,11 +107,9 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         data_und  =   np.hstack((undamaged_np, labels_und))
         print(data_dam.shape)
         print(data_und.shape)
-        
         self.samples_by_channel = np.vstack((data_dam, data_und))
         # save for later
         np.save("shear_build_samp_by_chnl.npy", self.samples_by_channel)
-
     def define_epochs(self, samples_per_epoch):
         if self.samples_by_channel is None:
             self.get_samples_by_channels()
@@ -146,7 +144,6 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
 
     # nbr_epochs is ignored for now (set to 5). nbr_epochs should be odd
     def get_data_instances(self, train, samples_per_epoch, nbr_epochs):
-
         channels_epochs_sample = self.define_epochs(samples_per_epoch) # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
         num_epochs = channels_epochs_sample.shape[1] 
         epoch_sequences = [] # stores sequences of epochs in a list

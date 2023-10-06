@@ -134,9 +134,9 @@ if __name__ == "__main__":
     img = img_data.transpose(1, 2, 0)
 
     # Display the image
-    # plt.imshow(img)
-    # plt.axis('off')  # To turn off axis numbers
-    # plt.show()
+    plt.imshow(img)
+    plt.axis('off')  # To turn off axis numbers
+    plt.show()
 
 
     # Initialize the model and optimizer
