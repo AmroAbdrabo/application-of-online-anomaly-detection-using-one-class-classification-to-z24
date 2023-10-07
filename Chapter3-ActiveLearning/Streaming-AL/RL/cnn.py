@@ -4,6 +4,7 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
 from dataloader import ShearBuildingLoader
+from dataloader import Z24Loader
 import matplotlib.pyplot as plt
 from torchvision.models import ResNet50_Weights, ResNet18_Weights
 import torch.nn.functional as F
@@ -15,49 +16,41 @@ class CustomResNet(nn.Module):
         super(CustomResNet, self).__init__()
         
         # Define the first conv layer
-        #self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1)
         
         # Load pre-trained ResNet (for other layers)
-        #if version == "18":
-        #    resnet = models.resnet18(weights=None)
-        #else:
-        #    resnet = models.resnet50(weights=None)
+        if version == "18":
+            resnet = models.resnet18()
+            final_conv_out_size = 512
+        else:
+            resnet = models.resnet50()
+            final_conv_out_size = 512 * 4  # because of the expanded ResNet-50 bottleneck blocks
             
-        # Replace the first convolutional layer in the pre-trained model with our 6-channel one
-        #resnet.conv1 = self.conv1
+        # Replace the first convolutional layer in the pre-trained model with our 5-channel one
+        resnet.conv1 = self.conv1
         
         # Use all layers of the ResNet model, but don't include the fully connected layer
-        #self.features = nn.Sequential(*list(resnet.children())[:-1])
+        self.features = nn.Sequential(*list(resnet.children())[:-1])
         
-        # Create a new fully connected layer
-        #self.fc = nn.Linear(512 * (4 if version == "50" else 1), num_classes)
+        # Calculate dense layers dynamically
+        dense_layers = []
+        current_input_size = final_conv_out_size
+        while current_input_size > 32:
+            next_output_size = current_input_size // 2
+            dense_layers.append(nn.Linear(current_input_size, next_output_size))
+            dense_layers.append(nn.ReLU())  # add an activation function
+            current_input_size = next_output_size
 
+        # Add the final layer to output `num_classes`
+        dense_layers.append(nn.Linear(current_input_size, num_classes))
+        self.dense = nn.Sequential(*dense_layers)
 
-        # Conv layer: num_features convolutional units with tanh activation
-        self.conv1 = nn.Conv2d(3, 6, kernel_size=10, padding=1)
-        
-        # 1D Conv layer: num_features convolutional units with tanh activation
-        self.conv2 = nn.Conv2d(6, 3, kernel_size=5, padding=1)
-        
-        # Calculate the size after convolution and pooling
-        # If input shape is (batch_size, num_features, seq_length), 
-        # The output shape from conv2 would be (batch_size, num_features, seq_length), since we're using padding.
-        # However, this calculation can be complex with larger networks, so you might need to empirically determine it.
-        # For this simple model, it remains the same.
-        self.flattened_size = 146880  # seq_length needs to be defined based on your input
-        
-        # Dense layer: 200 units with tanh activation
-        self.fc1 = nn.Linear(self.flattened_size, num_classes)
-    
     def forward(self, x):
-        x = F.tanh(self.conv1(x))
-        x = F.tanh(self.conv2(x))
-        x = F.dropout(x, p=0.25)
+        x = self.features(x)
         x = x.view(x.size(0), -1)
-        x = F.tanh(self.fc1(x))
-        x = F.dropout(x, p=0.50)
+        x = self.dense(x)
         return x
-
+    
 # convert to numpy array for usage in the CNN
 def pcolormesh_to_array(quadmesh):
     """
@@ -98,7 +91,7 @@ if __name__ == "__main__":
         correct = 0
         total = 0
         model.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             for inputs, labels in data_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
@@ -107,40 +100,54 @@ if __name__ == "__main__":
                 correct += (predicted == labels).sum().item()
         return correct / total
 
-    # function to transform an epoch of acceelration of the shearr buidling
-    def transform_epoch_shearbuilding(epoch):
+    # function to transform an epoch of acceelration of the shear buidling or z24 
+    def transform_epoch(epoch, fs):
         # calculate the spectrogram
-        fs = 4096
         f, t_spec, Sxx = signal.spectrogram(epoch, fs)
         
         # select subplot
         quadmesh = plt.pcolormesh(t_spec, f, 10*np.log10(Sxx), shading = 'gouraud')
         return pcolormesh_to_array(quadmesh)
 
+    building_type = 1 # set to 0 for shear loader, for Z24 set to any other value
+    
+    # size of each epoch (continuous segment/chunk of samples)
+    z24_epoch_size = 16384
+    shear_epoch_size = 16384 # should probably be smaller for shear since we have less data there
+
+    z24_fs = 100 # sampling rate for z24
+    shear_fs = 4096 #  .. and for shear building
+
     # Create the dataset and dataloader
-    dataset_train = ShearBuildingLoader(transform_epoch_shearbuilding)
-    dataset_train.get_data_instances(True, 16384, 3) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
+    dataset_train = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
+        building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
+    dataset_train.get_data_instances(True, 1) 
 
-    dataset_test = ShearBuildingLoader(transform_epoch_shearbuilding)
-    dataset_test.get_data_instances(False, 16384, 3) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
-
+    dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
+        building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
+    dataset_test.get_data_instances(False, 1) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
 
     torch.cuda.empty_cache()
     train_dataloader = DataLoader(dataset_train, batch_size=4, shuffle=True)
     test_dataloader = DataLoader(dataset_test, batch_size=4, shuffle=True)
-    img_data, label = dataset_train.__getitem__(4)
-    print(f"Each instance has size {img_data.shape}")
 
-    img = img_data.transpose(1, 2, 0)
 
-    # Display the image
-    plt.imshow(img)
-    plt.axis('off')  # To turn off axis numbers
-    plt.show()
+    # visualize one training instance
+    visualize_instance = False # set to true to visualize 
+    
+    if visualize_instance:
+        img_data, label = dataset_train.__getitem__(4)
+        print(f"Each instance has size {img_data.shape}")
+        img = img_data.transpose(1, 2, 0)
+
+        # Display the image
+        plt.imshow(img)
+        plt.axis('off')  # To turn off axis numbers
+        plt.show()
 
 
     # Initialize the model and optimizer
-    model = CustomResNet(version="18", num_classes=2).double()
+    model = CustomResNet(version="50", num_classes=2).double()
     print("CUDA availability")
     print(torch.cuda.is_available())
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

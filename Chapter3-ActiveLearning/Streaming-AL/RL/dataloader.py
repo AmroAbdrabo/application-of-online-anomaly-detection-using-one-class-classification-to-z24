@@ -8,12 +8,13 @@ import torch
 import os
 
 class CustomDataLoader:
-    def __init__(self, channels, epoch_transform, path):
+    def __init__(self, channels, epoch_size, epoch_transform, path):
         self.instances = None
         self.labels = None
         self.samples_by_channel = None # set by get_samples_by_channel
         self.samples = None
         self.channels = channels
+        self.epoch_size = epoch_size # number of samples in each epoch
         self.epoch_transform = epoch_transform
         self.path = path
 
@@ -45,14 +46,14 @@ class CustomDataLoader:
     @staticmethod # calculates indices of consecutive epochs
     def get_epoch_positions(i, nbr_epochs, tot_epochs):
         left_indices  = [max(i - el, 0) for el in range(1, int(nbr_epochs//2))]
-        right_indices = [min(i + el, tot_epochs - 1) for el in range(int(nbr_epochs//2))] # includes i also
-        return left_indices + right_indices
+        right_indices = [min(i + el, tot_epochs - 1) for el in range(1, int(nbr_epochs//2))] # includes i also
+        return left_indices + [i] + right_indices
 
 # Dataset for shear building        
 
 class ShearBuildingLoader(Dataset, CustomDataLoader):
-    def __init__(self, epoch_transform):
-        super().__init__(6, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
+    def __init__(self, epoch_size, epoch_transform):
+        super().__init__(6, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
 
     def get_samples_by_channels(self):
         try:
@@ -110,7 +111,8 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         self.samples_by_channel = np.vstack((data_dam, data_und))
         # save for later
         np.save("shear_build_samp_by_chnl.npy", self.samples_by_channel)
-    def define_epochs(self, samples_per_epoch):
+    def define_epochs(self):
+        samples_per_epoch = self.epoch_size
         if self.samples_by_channel is None:
             self.get_samples_by_channels()
 
@@ -119,9 +121,10 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         # define a wraparound in case the samples per epoch do not evenly divide the number of samples
         nbr_samples = data.shape[0]
         wraparound_amt = samples_per_epoch - (nbr_samples % samples_per_epoch)
-        new_len = nbr_samples + wraparound_amt
+        new_len = nbr_samples + wraparound_amt if (nbr_samples % samples_per_epoch) != 0 else nbr_samples
 
-        if wraparound_amt != 0:
+        # if the number of samples per epoch does not evenly divide the number of samples, then add wrap-around
+        if (nbr_samples % samples_per_epoch) != 0:
             wraparound = self.samples_by_channel[0:wraparound_amt, :]
             self.samples_by_channel = np.vstack(( self.samples_by_channel, wraparound ))
             data = self.samples_by_channel[:, :-1]
@@ -140,11 +143,12 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         # we have to deal with heterogeneous rows by taking the majority element
         self.labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels).astype(np.int64)
 
-        return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples or shape of return value of epoch_transform)
+        return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples_per_epoch or shape of return value of epoch_transform)
 
     # nbr_epochs is ignored for now (set to 5). nbr_epochs should be odd
-    def get_data_instances(self, train, samples_per_epoch, nbr_epochs):
-        channels_epochs_sample = self.define_epochs(samples_per_epoch) # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
+    def get_data_instances(self, train, nbr_epochs):
+        samples_per_epoch  = self.epoch_size
+        channels_epochs_sample = self.define_epochs() # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
         num_epochs = channels_epochs_sample.shape[1] 
         epoch_sequences = [] # stores sequences of epochs in a list
         
@@ -174,6 +178,191 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
             subset_test = self.instances[not_selected]
             self.instances = subset_test
 
+    def __len__(self):
+        return self.instances.shape[0]
+
+    def __getitem__(self, idx):
+        return self.instances[idx], self.labels[idx]
+
+from scipy.io import loadmat
+
+Z24_HEALTHY_STATES = np.arange(8)
+class Z24Loader(CustomDataLoader, Dataset):
+    def __init__(self, epoch_size, epoch_transform):
+        super().__init__(5, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
+
+    def get_avt_files(self, root):
+        folder_path = root
+        file_list = os.listdir(folder_path)
+        avt_files = []
+
+        # walk inside data folder
+        for filename in file_list:
+            full_path = os.path.join(folder_path, filename)
+            cur_label = int(filename)
+
+            # walk inside data/[number]
+            file_nest_list = os.listdir(full_path)
+            for filename_1 in file_nest_list:
+                if filename_1 != "avt":
+                    continue
+                else:
+                    # full_path_2 is of the form C:\Users\amroa\Documents\thesis\data\01\avt
+                    full_path_2 = os.path.join(full_path, filename_1)
+                    setup_filenames = [filename for filename in os.listdir(full_path_2) if "setup" in filename]
+                    for avt_file in setup_filenames:
+                        full_path_3 = os.path.join(full_path_2, avt_file) # full_path_3 is of the form C:\Users\amroa\Documents\thesis\data\01\avt\01setup09.mat
+                        avt = loadmat(full_path_3)
+                        avt_files.append(avt)
+        return avt_files
+
+    def get_dataframes(self, avt_files):
+        """
+        This method returns a list of dataframes # type: ignore
+        A dataframe is of the form: # type: ignore
+        R1V R2L ... R3V  (column names)
+        0.1 0.3 ... 0.12
+        0.4 0.1 ... 0.22 
+        """
+        good_sensors = ['R1V ', 'R2L ', 'R2T ', 'R2V ', 'R3V ']
+        result = pd.DataFrame(columns=good_sensors)
+        list_df = [] # should contain 17 entries, one for each damage state 
+
+        # get pandas dataframes
+        for idx, avt in enumerate(avt_files):
+            # get index of the good sensor/positions
+            arr_sensors = avt['labelshulp']
+            bool_array = np.isin(arr_sensors, good_sensors) #  will contain True if entry corresponds to a good sensor
+            indices_good_sensors = np.where(bool_array)[0]
+
+            # Create a Pandas DataFrame
+            df = pd.DataFrame(data=avt['data'][:, indices_good_sensors], columns=arr_sensors[indices_good_sensors])
+            result = pd.concat([result, df], ignore_index=True)
+
+            if (idx+1) % 9 == 0:
+                # Most of the dataframes are 589824 except for 4 of them
+                # Mirror the top part to the bottom to achive the same length
+                top_rows = result.head(589824 - len(result))
+
+                # Concatenate the sliced rows to the bottom of the original DataFrame
+                new_res = pd.concat([result, top_rows], ignore_index=True)
+
+                list_df.append(new_res)
+                result = pd.DataFrame(columns=good_sensors)
+
+        return list_df
+
+    @staticmethod # generate binary labels out of damage scenario labels
+    def binarize(label):
+        if label in Z24_HEALTHY_STATES: 
+            return 0
+        else:
+            return 1
+    def get_samples_by_channels(self):
+        try:
+            z24_samp_by_chnl = np.load("z24_samp_by_chnl.npy")
+            self.samples_by_channel = z24_samp_by_chnl
+        except:
+            print("Could not read pickled z24_samp_by_chnl.npy")
+
+        # read the avt files in MAT format
+        avt_files = self.get_avt_files("C:\\Users\\amroa\\Documents\\thesis\\data")
+
+        # get 17 pandas dataframes (one for each damage scenario) 
+        dfs = self.get_dataframes(avt_files)
+
+        # get the length of each damage scenario (nbr of rows of each dataframe)
+        label_lengths = [len(df) for df in dfs]
+
+        # create a list of labels e.g. [0,0,0,...1,1,1,1,1....2,2,2,......16,16,16] --> binarize labels --> [0,0,0,0, ...., 0,0,0, ... 1,1,1,1,1,1]
+        labels = np.concatenate([np.full(label_lengths[i], Z24Loader.binarize(i)) for i in range(len(dfs))])
+
+        # total number of acceleration samples (each sampling point has a label)
+        nbr_labels = len(labels) 
+
+        # concatenate all dataframes vertically into a large dataframe
+        df_samples_by_channel  = pd.concat(dfs, axis=0, ignore_index=True)
+
+        # convert it to numpy
+        samples_by_channels = df_samples_by_channel.astype(np.float64).to_numpy()
+
+        # append the labels to the numpy array
+        self.samples_by_channel = np.hstack((samples_by_channels, labels.reshape(nbr_labels, -1)))
+        
+        # save for faster loading in the try block at the top of this method 
+        np.save("z24_samp_by_chnl.npy", self.samples_by_channel)
+    
+    def define_epochs(self):
+        # same as shear building
+        samples_per_epoch = self.epoch_size
+        if self.samples_by_channel is None:
+            self.get_samples_by_channels()
+
+        # get the samples by channel, but exclude labels
+        data = self.samples_by_channel[:, :-1]
+
+        # define a wraparound in case the samples per epoch do not evenly divide the number of samples
+        nbr_samples = data.shape[0]
+        wraparound_amt = samples_per_epoch - (nbr_samples % samples_per_epoch) 
+        new_len = nbr_samples + wraparound_amt if (nbr_samples % samples_per_epoch) != 0 else nbr_samples
+
+        # technically no wraparound should be generated for Z24 as the method get_dataframes ensures that all lengths are powers of 2
+        if (nbr_samples % samples_per_epoch) != 0:
+            print("ERROR: wrap-around occurred for Z24 data")
+            wraparound = self.samples_by_channel[0:wraparound_amt, :]
+            self.samples_by_channel = np.vstack(( self.samples_by_channel, wraparound ))
+            data = self.samples_by_channel[:, :-1]
+
+        # now that the wraparound part is done, we reshape into the data into desired epochs 
+        print(f"Epochs for {self.channels} Z24 channels")
+        
+        nbr_segs = int(new_len // samples_per_epoch) # could also be called nbr_epochs
+
+        # list of length number of channel, where each element is of size (nbr_segs, samples_per_epoch) if transform is identity otherwise each element is of size (nbr_segs, shape of return value of transform on one epoch)
+        channels_epochs_sample =  [np.apply_along_axis(self.epoch_transform, axis = 1, arr=  data[:, i].reshape((nbr_segs, samples_per_epoch))  ) for i in range(self.channels)]
+
+        # for the labels, we reshape into (nbr_segs or nbr_epochs, samples_)
+        labels = (self.samples_by_channel[:, -1]).reshape((nbr_segs, samples_per_epoch))
+
+        # we have to deal with heterogeneous rows by taking the majority element
+        self.labels = np.apply_along_axis(lambda x: 1 if np.mean(x) >= 0.5 else 0, axis = 1, arr = labels).astype(np.int64)
+
+        return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples_per_epoch or shape of return value of epoch_transform)
+    
+    # Same as ShearBuildingLoader get_instances 
+    # TODO: place it in the super class CustomDataLoader
+    def get_data_instances(self, train, nbr_epochs):
+        samples_per_epoch  = self.epoch_size
+        channels_epochs_sample = self.define_epochs() # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
+        num_epochs = channels_epochs_sample.shape[1] 
+        epoch_sequences = [] # stores sequences of epochs in a list
+        
+        # adapted from https://github.com/AmroAbdrabo/task4/blob/main/CNN.py
+        for i in range(0, num_epochs):
+            conseutive_epoch_indices = CustomDataLoader.get_epoch_positions(i, nbr_epochs, tot_epochs = num_epochs) # nbr_epochs is the number of consecutive epochs to consider for each instance
+            arr = []
+            for j in range(self.channels):
+                cur_epochs_sample = channels_epochs_sample[j] # get the data for the i'th channel
+                arr.append(np.concatenate([cur_epochs_sample[ep] for ep in conseutive_epoch_indices])) # shape epoch_shape[0]*5, epoch_shape[1], epoch_shape[2]
+            epochs_all_channel_center_i = np.concatenate(arr) # shape epoch_shape[0]*5*channels, epoch_shape[1], epoch_shape[2], note epoch_shape[2] is RGB information in case we use pcolormesh
+            epoch_sequences.append(epochs_all_channel_center_i.transpose((2, 0, 1))) # RGB channel first since pytorch requires it that way 
+        
+        # shape of instances is (nbr_epochs, epoch_shapa[2], epoch_shape[0]*5*nbr_channels, epoch_shape[1]) note the *5 is due to the concatenation above and that epoch_shape[2] is most likely 3 for the number of channels in an RGB image
+        np.random.seed(42)
+        self.instances =  np.array(epoch_sequences).astype(np.float64)
+        nbr_inst = self.instances.shape[0]
+        num_elements = int(0.9 * nbr_inst) # for training data we use 70%
+        if train:
+            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
+            subset_train = self.instances[selected_indices]
+            self.instances = subset_train
+        else:
+            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
+            # get the numbers not in selected_indices
+            not_selected = np.setdiff1d(np.arange(nbr_inst), selected_indices)
+            subset_test = self.instances[not_selected]
+            self.instances = subset_test
+            
     def __len__(self):
         return self.instances.shape[0]
 
