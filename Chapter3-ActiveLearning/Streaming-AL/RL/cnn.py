@@ -95,7 +95,7 @@ if __name__ == "__main__":
             for inputs, labels in data_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
-                _, predicted = torch.max(outputs, 1)
+                _, predicted = torch.max(F.softmax(outputs, dim=1), 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
         return correct / total
@@ -126,6 +126,7 @@ if __name__ == "__main__":
     dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
     dataset_test.get_data_instances(False, 1) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
+    print(dataset_test.instances)
 
     torch.cuda.empty_cache()
     train_dataloader = DataLoader(dataset_train, batch_size=4, shuffle=True)
@@ -134,7 +135,7 @@ if __name__ == "__main__":
 
     # visualize one training instance
     visualize_instance = False # set to true to visualize 
-    
+
     if visualize_instance:
         img_data, label = dataset_train.__getitem__(4)
         print(f"Each instance has size {img_data.shape}")
@@ -191,7 +192,7 @@ if __name__ == "__main__":
             correct_predictions += (predicted == labels).sum().item()
             total_predictions += labels.size(0)
         
-        test_accuracy = get_accuracy(model, test_dataloader, device) 
+        test_accuracy = 100*get_accuracy(model, test_dataloader, device) 
         test_accuracies.append(test_accuracy)
         print(f"Epoch {epoch+1}/{num_epochs}, Test Accuracy: {test_accuracy:.2f}%")
 

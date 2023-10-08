@@ -5,6 +5,7 @@ from scipy.signal import butter, lfilter, filtfilt
 from scipy.signal import detrend
 from torch.utils.data import Dataset, DataLoader
 import torch
+import sys
 import os
 
 class CustomDataLoader:
@@ -59,6 +60,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         try:
             shear_build_samp_by_chnl = np.load("shear_build_samp_by_chnl.npy")
             self.samples_by_channel = shear_build_samp_by_chnl
+            return 
         except:
             print("Could not read pickled shear_build_samp_by_chnl.npy")
         # check first if result was already computed
@@ -147,6 +149,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
 
     # nbr_epochs is ignored for now (set to 5). nbr_epochs should be odd
     def get_data_instances(self, train, nbr_epochs):
+        
         samples_per_epoch  = self.epoch_size
         channels_epochs_sample = self.define_epochs() # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
         num_epochs = channels_epochs_sample.shape[1] 
@@ -167,15 +170,16 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         self.instances =  np.array(epoch_sequences).astype(np.float64)
         nbr_inst = self.instances.shape[0]
         num_elements = int(0.7 * nbr_inst) # for training data we use 70%
+        selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
         if train:
-            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
             subset_train = self.instances[selected_indices]
+            self.labels = self.labels[selected_indices]
             self.instances = subset_train
         else:
-            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
             # get the numbers not in selected_indices
             not_selected = np.setdiff1d(np.arange(nbr_inst), selected_indices)
             subset_test = self.instances[not_selected]
+            self.labels = self.labels[not_selected]
             self.instances = subset_test
 
     def __len__(self):
@@ -190,6 +194,7 @@ Z24_HEALTHY_STATES = np.arange(8)
 class Z24Loader(CustomDataLoader, Dataset):
     def __init__(self, epoch_size, epoch_transform):
         super().__init__(5, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
+        sys.path.append('.\\Chapter2-Z24-dataset')
 
     def get_avt_files(self, root):
         folder_path = root
@@ -224,6 +229,7 @@ class Z24Loader(CustomDataLoader, Dataset):
         0.1 0.3 ... 0.12
         0.4 0.1 ... 0.22 
         """
+        from preprocess import preprocess, preprocess_without_std
         good_sensors = ['R1V ', 'R2L ', 'R2T ', 'R2V ', 'R3V ']
         result = pd.DataFrame(columns=good_sensors)
         list_df = [] # should contain 17 entries, one for each damage state 
@@ -246,6 +252,7 @@ class Z24Loader(CustomDataLoader, Dataset):
 
                 # Concatenate the sliced rows to the bottom of the original DataFrame
                 new_res = pd.concat([result, top_rows], ignore_index=True)
+                new_res = new_res.apply(lambda x: preprocess_without_std(x), axis=0)   # bandpass filtering to 50 Hz completely removed the data so it will not be done
 
                 list_df.append(new_res)
                 result = pd.DataFrame(columns=good_sensors)
@@ -262,6 +269,7 @@ class Z24Loader(CustomDataLoader, Dataset):
         try:
             z24_samp_by_chnl = np.load("z24_samp_by_chnl.npy")
             self.samples_by_channel = z24_samp_by_chnl
+            return 
         except:
             print("Could not read pickled z24_samp_by_chnl.npy")
 
@@ -332,6 +340,7 @@ class Z24Loader(CustomDataLoader, Dataset):
     # Same as ShearBuildingLoader get_instances 
     # TODO: place it in the super class CustomDataLoader
     def get_data_instances(self, train, nbr_epochs):
+        
         samples_per_epoch  = self.epoch_size
         channels_epochs_sample = self.define_epochs() # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
         num_epochs = channels_epochs_sample.shape[1] 
@@ -352,17 +361,18 @@ class Z24Loader(CustomDataLoader, Dataset):
         self.instances =  np.array(epoch_sequences).astype(np.float64)
         nbr_inst = self.instances.shape[0]
         num_elements = int(0.9 * nbr_inst) # for training data we use 70%
+        selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
         if train:
-            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
             subset_train = self.instances[selected_indices]
+            self.labels = self.labels[selected_indices]
             self.instances = subset_train
         else:
-            selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
             # get the numbers not in selected_indices
             not_selected = np.setdiff1d(np.arange(nbr_inst), selected_indices)
             subset_test = self.instances[not_selected]
+            self.labels = self.labels[not_selected]
             self.instances = subset_test
-            
+
     def __len__(self):
         return self.instances.shape[0]
 
