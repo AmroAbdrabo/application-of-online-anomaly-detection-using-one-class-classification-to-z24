@@ -126,7 +126,6 @@ if __name__ == "__main__":
     dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
     dataset_test.get_data_instances(False, 1) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
-    print(dataset_test.instances)
 
     torch.cuda.empty_cache()
     train_dataloader = DataLoader(dataset_train, batch_size=4, shuffle=True)
@@ -149,6 +148,8 @@ if __name__ == "__main__":
 
     # Initialize the model and optimizer
     model = CustomResNet(version="50", num_classes=2).double()
+    model.load_state_dict(torch.load('model_weights.pth'))
+
     print("CUDA availability")
     print(torch.cuda.is_available())
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
