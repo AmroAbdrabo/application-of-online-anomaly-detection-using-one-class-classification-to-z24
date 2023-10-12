@@ -4,6 +4,8 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
 from dataloader import ShearBuildingLoader
+import torch
+from torchviz import make_dot
 from dataloader import Z24Loader
 import matplotlib.pyplot as plt
 from torchvision.models import ResNet50_Weights, ResNet18_Weights
@@ -131,27 +133,35 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(dataset_train, batch_size=4, shuffle=True)
     test_dataloader = DataLoader(dataset_test, batch_size=4, shuffle=True)
 
-
     # visualize one training instance
-    visualize_instance = False # set to true to visualize 
+    visualize_instance = True # set to true to visualize 
 
     if visualize_instance:
         img_data, label = dataset_train.__getitem__(4)
-        print(f"Each instance has size {img_data.shape}")
+        print(f"Each instance has size {img_data.shape}") # each instance of pcolormesh image is of size (3, 129, 73) -> (3, 645, 73)
         img = img_data.transpose(1, 2, 0)
+        print(img)
 
         # Display the image
         plt.imshow(img)
         plt.axis('off')  # To turn off axis numbers
         plt.show()
 
-
     # Initialize the model and optimizer
     model = CustomResNet(version="50", num_classes=2).double()
     model.load_state_dict(torch.load('model_weights.pth'))
 
-    print("CUDA availability")
-    print(torch.cuda.is_available())
+    # to visualize computation graph
+    """
+    dummy_input = torch.randn(1, 3, 645, 73).double()
+    output = model(dummy_input)
+
+    # Visualize the model
+    dot = make_dot(output)
+    dot.render("model_architecture", format="png")
+    """
+
+    print(f"CUDA availability {torch.cuda.is_available()}")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
