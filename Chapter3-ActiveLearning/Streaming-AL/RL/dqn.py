@@ -24,14 +24,14 @@ class CNNTransformedDataset(Dataset):
 
 
 # The environment here is the one class classifier. Dataset here is the transformed dataset above
-class SimpleEnvironment:
-    def __init__(self, model, dataset, cnn_extract, budget):
+class TestingEnvironment:
+    def __init__(self, model, dataset, offset, budget):
         # the model to train on
         self.model = model
         # the model to save later
         self.original_model = copy.deepcopy(model) 
-        # current instance
-        self.inst = 0 
+        # current instance (we don't start cold)
+        self.inst = offset
         # excluded instances 
         self.excluded = []
         # dataset
@@ -42,8 +42,11 @@ class SimpleEnvironment:
 
     def reset(self):
         # return first state
+        self.inst = self.offset
         self.model = self.original_model
         self.original_model = copy.deepcopy(self.original_model)
+        next_inst, _ = self.dataset[self.inst]
+        return [(next_inst, 0), 0,0]
     
     def step(self, action):
         # return next_state, reward, done
@@ -52,7 +55,7 @@ class SimpleEnvironment:
             self.excluded.append(self.inst)
 
         self.inst = self.inst + 1 #  next instance
-        next_inst, next_label = self.dataset[self.inst]
+        next_inst, _ = self.dataset[self.inst]
         change_acc, score = self.train() # larger score more likely an inlier (score and change_acc produced by next state)
         done = 0
         if self.budget == self.inst:
@@ -138,7 +141,7 @@ class DQN:
             self.epsilon *= self.epsilon_decay
 
 if __name__ == "__main__":
-    env = SimpleEnvironment()
+    env = TestingEnvironment()
     state_size = 2  # Assume a state size of 2 for simplicity
     action_size = 2  # Assume an action size of 2 for simplicity
     agent = DQN(state_size, action_size)
