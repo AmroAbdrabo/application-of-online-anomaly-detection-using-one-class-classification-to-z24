@@ -2,13 +2,30 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
+from torch.utils.data import Dataset
 import random
+from sklearn.metrics import accuracy_score
 from collections import deque
 import copy
 
-# The environment here is the one class classifier
+# returns CNN (only convolutional layers) applied to the instances of the original dataset
+class CNNTransformedDataset(Dataset):
+    def __init__(self, original_dataset, transform):
+        self.original_dataset = original_dataset
+        self.transform = transform
+    
+    def __len__(self):
+        return len(self.original_dataset)
+    
+    def __getitem__(self, index):
+        instance, label = self.original_dataset[index]
+        label = -2*label + 1 # label = 0 is healthy, 1 is unhealthy but we want 1 healthy and -1 unhealthy
+        return self.transform(instance), label
+
+
+# The environment here is the one class classifier. Dataset here is the transformed dataset above
 class SimpleEnvironment:
-    def __init__(self, model, dataset):
+    def __init__(self, model, dataset, cnn_extract, budget):
         # the model to train on
         self.model = model
         # the model to save later
@@ -19,23 +36,39 @@ class SimpleEnvironment:
         self.excluded = []
         # dataset
         self.dataset = dataset
+        # current accuracy
+        self.acc = 0
+        self.budget = budget
 
     def reset(self):
+        # return first state
         self.model = self.original_model
         self.original_model = copy.deepcopy(self.original_model)
     
     def step(self, action):
+        # return next_state, reward, done
         if action == 0:
             # if not label
             self.excluded.append(self.inst)
         self.inst = self.inst + 1
+        next_inst, next_label = self.dataset[self.inst]
+        change_acc = self.train()
+        done = 0
+        if self.budget == self.inst:
+            done = 1
+
+        return [next_inst, change_acc, done]
+        
 
     def train(self):
-        instances, labels = self.dataset[:self.inst]
+        # allowed instances
+        allowed_instances = np.setdiff1d(np.arange(self.inst), self.excluded)
+        instances, labels = self.dataset[allowed_instances]
         self.model = self.model.fit(instances)
-        self.model.predict(instances)
-        
-    
+        new_acc = accuracy_score(labels, self.model.predict(instances)) 
+        change_acc = new_acc - self.acc
+        self.acc = new_acc
+        return change_acc
 
 class DQNNetwork(nn.Module):
     def __init__(self, state_size, action_size):
