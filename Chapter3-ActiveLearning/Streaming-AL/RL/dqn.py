@@ -50,14 +50,14 @@ class SimpleEnvironment:
         if action == 0:
             # if not label
             self.excluded.append(self.inst)
-        self.inst = self.inst + 1
+
+        self.inst = self.inst + 1 #  next instance
         next_inst, next_label = self.dataset[self.inst]
-        change_acc = self.train()
+        change_acc, score = self.train() # larger score more likely an inlier (score and change_acc produced by next state)
         done = 0
         if self.budget == self.inst:
             done = 1
-
-        return [next_inst, change_acc, done]
+        return [(next_inst, score), change_acc, done]
         
 
     def train(self):
@@ -68,7 +68,11 @@ class SimpleEnvironment:
         new_acc = accuracy_score(labels, self.model.predict(instances)) 
         change_acc = new_acc - self.acc
         self.acc = new_acc
-        return change_acc
+
+        # get the latest instance and get the score
+        last_inst = allowed_instances[-1]
+        score = self.model.score_samples(instances[last_inst: last_inst + 1, :])[0]
+        return change_acc, score
 
 class DQNNetwork(nn.Module):
     def __init__(self, state_size, action_size):
@@ -136,7 +140,7 @@ class DQN:
 if __name__ == "__main__":
     env = SimpleEnvironment()
     state_size = 2  # Assume a state size of 2 for simplicity
-    action_size = 1  # Assume an action size of 2 for simplicity
+    action_size = 2  # Assume an action size of 2 for simplicity
     agent = DQN(state_size, action_size)
     batch_size = 32
     episodes = 1000
