@@ -150,6 +150,8 @@ from cnn import CustomResNet
 if __name__ == "__main__":
     clf = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
     ctd = CNNTransformedDataset()
+    sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
+    offset = 30 #  how many healthy samples we start off with
 
     # dataset loader for building
     z24_fs = 100
@@ -161,16 +163,17 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load('model_weights.pth'))
 
     dataset_transformed = CNNTransformedDataset(dataset_train, model.features)
-    env = TestingEnvironment(clf,)
+    env = TestingEnvironment(clf, dataset_transformed, offset, sampling_budget)
     state_size = 2  # Assume a state size of 2 for simplicity
     action_size = 2  # Assume an action size of 2 for simplicity
     agent = DQN(state_size, action_size)
     batch_size = 32
     episodes = 1000
+    
 
     for e in range(episodes):
         state = env.reset()
-        for time in range(200):  # 200 is the budget for the active learning 
+        for time in range(sampling_budget):  # 200 is the budget for the active learning 
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
             agent.remember(state, action, reward, next_state, done)
