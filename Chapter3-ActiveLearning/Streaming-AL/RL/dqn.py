@@ -32,8 +32,10 @@ class TestingEnvironment:
         self.model = model
         # the model to save later
         self.original_model = copy.deepcopy(model) 
-        # current instance at offset (we don't start cold)
+        # current instance begins at an offset (we don't start cold)
         self.inst = offset
+        # the offset for later resets
+        self.offset = offset
         # excluded instances 
         self.excluded = []
         # dataset
@@ -149,7 +151,6 @@ from dataloader import ShearBuildingLoader, Z24Loader
 from cnn import CustomResNet
 if __name__ == "__main__":
     clf = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
-    ctd = CNNTransformedDataset()
     sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
     offset = 30 #  how many healthy samples we start off with
 
@@ -162,7 +163,7 @@ if __name__ == "__main__":
     model = CustomResNet(version="50", num_classes=2).double()
     model.load_state_dict(torch.load('model_weights.pth'))
 
-    dataset_transformed = CNNTransformedDataset(dataset_train, model.features)
+    dataset_transformed = CNNTransformedDataset(original_dataset=dataset_train, transform=model.features)
     env = TestingEnvironment(clf, dataset_transformed, offset, sampling_budget)
     state_size = 2  # Assume a state size of 2 for simplicity
     action_size = 2  # Assume an action size of 2 for simplicity
