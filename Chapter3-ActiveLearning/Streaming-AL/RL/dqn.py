@@ -4,9 +4,11 @@ import torch.optim as optim
 import numpy as np
 from torch.utils.data import Dataset
 import random
+from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import accuracy_score
 from collections import deque
 import copy
+from cnn import transform_epoch
 
 # returns CNN (only convolutional layers) applied to the instances of the original dataset
 class CNNTransformedDataset(Dataset):
@@ -30,7 +32,7 @@ class TestingEnvironment:
         self.model = model
         # the model to save later
         self.original_model = copy.deepcopy(model) 
-        # current instance (we don't start cold)
+        # current instance at offset (we don't start cold)
         self.inst = offset
         # excluded instances 
         self.excluded = []
@@ -42,11 +44,13 @@ class TestingEnvironment:
 
     def reset(self):
         # return first state
+        self.excluded = []
         self.inst = self.offset
         self.model = self.original_model
         self.original_model = copy.deepcopy(self.original_model)
         next_inst, _ = self.dataset[self.inst]
-        return [(next_inst, 0), 0,0]
+        _, score = self.train()
+        return (next_inst, score)
     
     def step(self, action):
         # return next_state, reward, done
@@ -60,6 +64,7 @@ class TestingEnvironment:
         done = 0
         if self.budget == self.inst:
             done = 1
+
         return [(next_inst, score), change_acc, done]
         
 
@@ -140,8 +145,23 @@ class DQN:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
+from dataloader import ShearBuildingLoader, Z24Loader
+from cnn import CustomResNet
 if __name__ == "__main__":
-    env = TestingEnvironment()
+    clf = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
+    ctd = CNNTransformedDataset()
+
+    # dataset loader for building
+    z24_fs = 100
+    z24_epoch_size = 16384
+    dataset_train = Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
+
+    # load the CNN which will give the feature vectors
+    model = CustomResNet(version="50", num_classes=2).double()
+    model.load_state_dict(torch.load('model_weights.pth'))
+
+    dataset_transformed = CNNTransformedDataset(dataset_train, model.features)
+    env = TestingEnvironment(clf,)
     state_size = 2  # Assume a state size of 2 for simplicity
     action_size = 2  # Assume an action size of 2 for simplicity
     agent = DQN(state_size, action_size)

@@ -53,6 +53,11 @@ class CustomResNet(nn.Module):
         x = self.dense(x)
         return x
     
+    def features(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        return x
+    
 # convert to numpy array for usage in the CNN
 def pcolormesh_to_array(quadmesh):
     """
@@ -88,8 +93,7 @@ def pcolormesh_to_array(quadmesh):
 
     return img_array
 
-if __name__ == "__main__":
-    def get_accuracy(model, data_loader, device):
+def get_accuracy(model, data_loader, device):
         correct = 0
         total = 0
         model.eval()
@@ -103,14 +107,15 @@ if __name__ == "__main__":
         return correct / total
 
     # function to transform an epoch of acceelration of the shear buidling or z24 
-    def transform_epoch(epoch, fs):
-        # calculate the spectrogram
-        f, t_spec, Sxx = signal.spectrogram(epoch, fs)
-        
-        # select subplot
-        quadmesh = plt.pcolormesh(t_spec, f, 10*np.log10(Sxx), shading = 'gouraud')
-        return pcolormesh_to_array(quadmesh)
+def transform_epoch(epoch, fs):
+    # calculate the spectrogram
+    f, t_spec, Sxx = signal.spectrogram(epoch, fs)
+    
+    # select subplot
+    quadmesh = plt.pcolormesh(t_spec, f, 10*np.log10(Sxx), shading = 'gouraud')
+    return pcolormesh_to_array(quadmesh)
 
+if __name__ == "__main__":
     building_type = 1 # set to 0 for shear loader, for Z24 set to any other value
     
     # size of each epoch (continuous segment/chunk of samples)
