@@ -10,6 +10,7 @@ from dataloader import Z24Loader
 import matplotlib.pyplot as plt
 from torchvision.models import ResNet50_Weights, ResNet18_Weights
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import StepLR
 import numpy as np
 from scipy import signal
 
@@ -22,10 +23,10 @@ class CustomResNet(nn.Module):
         
         # Load pre-trained ResNet (for other layers)
         if version == "18":
-            resnet = models.resnet18()
+            resnet = models.resnet18(weights = ResNet18_Weights.DEFAULT)
             final_conv_out_size = 512
         else:
-            resnet = models.resnet50()
+            resnet = models.resnet50(weights = ResNet50_Weights.DEFAULT)
             final_conv_out_size = 512 * 4  # because of the expanded ResNet-50 bottleneck blocks
             
         # Replace the first convolutional layer in the pre-trained model with our 5-channel one
@@ -53,7 +54,7 @@ class CustomResNet(nn.Module):
         x = self.dense(x)
         return x
     
-    def features(self, x):
+    def feature_vec(self, x):
         x = self.features(x)
         x = x.view(x.size(0), -1)
         return x
@@ -116,11 +117,11 @@ def transform_epoch(epoch, fs):
     return pcolormesh_to_array(quadmesh)
 
 if __name__ == "__main__":
-    building_type = 1 # set to 0 for shear loader, for Z24 set to any other value
+    building_type = 0 # set to 0 for shear loader, for Z24 set to any other value
     
     # size of each epoch (continuous segment/chunk of samples)
     z24_epoch_size = 16384
-    shear_epoch_size = 16384 # should probably be smaller for shear since we have less data there
+    shear_epoch_size = 2048 # should probably be smaller for shear since we have less data there
 
     z24_fs = 100 # sampling rate for z24
     shear_fs = 4096 #  .. and for shear building
@@ -129,6 +130,7 @@ if __name__ == "__main__":
     dataset_train = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
     dataset_train.get_data_instances(0, 1) 
+    print(f"Training on {dataset_train.instances.shape[0]} instances")
 
     dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     test_dataloader = DataLoader(dataset_test, batch_size=4, shuffle=True)
 
     # visualize one training instance
-    visualize_instance = True # set to true to visualize 
+    visualize_instance = False # set to true to visualize 
 
     if visualize_instance:
         img_data, label = dataset_train.__getitem__(4)
@@ -154,7 +156,7 @@ if __name__ == "__main__":
 
     # Initialize the model and optimizer
     model = CustomResNet(version="50", num_classes=2).double()
-    model.load_state_dict(torch.load('model_weights.pth'))
+    #model.load_state_dict(torch.load('model_weights.pth'))
 
     # to visualize computation graph
     """
@@ -169,6 +171,8 @@ if __name__ == "__main__":
     print(f"CUDA availability {torch.cuda.is_available()}")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+    # After 3 epochs, the learning rate will be multiplied by 0.5 (i.e., 0.001 * 0.5 = 0.0005)
+    scheduler = StepLR(optimizer, step_size=3, gamma=0.5)
     criterion = nn.CrossEntropyLoss()
 
     model.to(device)
@@ -219,6 +223,7 @@ if __name__ == "__main__":
         # Store the loss and accuracy
         epoch_losses.append(average_loss)
         epoch_accuracies.append(accuracy)
+        scheduler.step()
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}, Accuracy: {accuracy:.2f}%")
 
