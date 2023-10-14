@@ -128,11 +128,11 @@ if __name__ == "__main__":
     # Create the dataset and dataloader
     dataset_train = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
-    dataset_train.get_data_instances(True, 1) 
+    dataset_train.get_data_instances(0, 1) 
 
     dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
-    dataset_test.get_data_instances(False, 1) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
+    dataset_test.get_data_instances(1, 1) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
 
     torch.cuda.empty_cache()
     train_dataloader = DataLoader(dataset_train, batch_size=4, shuffle=True)

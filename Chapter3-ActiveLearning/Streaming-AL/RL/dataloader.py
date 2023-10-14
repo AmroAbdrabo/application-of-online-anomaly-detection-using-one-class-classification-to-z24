@@ -27,12 +27,9 @@ class CustomDataLoader:
     def define_epochs(self, samples_per_epoch):
         pass
 
-    # optional: do transformations on each epoch
-    def transform_epochs(self, epoch):
-        pass
-
     # constructs an array of size (N//s, a*s) where a is the number of desired epochs per instance. nbr_epochs is the number of epochs to use for one instance
-    def get_data_instances(self, samples_per_epoch, nbr_epochs):
+    # train_test_all is 0 if train, 1 if test, and 2 if all
+    def get_data_instances(self, train_test_all, nbr_epochs):
         pass
 
     @staticmethod
@@ -148,7 +145,7 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         return np.array(channels_epochs_sample) # shape: (channels, nbr_epochs, samples_per_epoch or shape of return value of epoch_transform)
 
     # nbr_epochs is ignored for now (set to 5). nbr_epochs should be odd
-    def get_data_instances(self, train, nbr_epochs):
+    def get_data_instances(self, train_test_all, nbr_epochs):
         
         samples_per_epoch  = self.epoch_size
         channels_epochs_sample = self.define_epochs() # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
@@ -171,11 +168,11 @@ class ShearBuildingLoader(Dataset, CustomDataLoader):
         nbr_inst = self.instances.shape[0]
         num_elements = int(0.7 * nbr_inst) # for training data we use 70%
         selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
-        if train:
+        if train_test_all == 0:
             subset_train = self.instances[selected_indices]
             self.labels = self.labels[selected_indices]
             self.instances = subset_train
-        else:
+        elif train_test_all == 1:
             # get the numbers not in selected_indices
             not_selected = np.setdiff1d(np.arange(nbr_inst), selected_indices)
             subset_test = self.instances[not_selected]
@@ -339,7 +336,7 @@ class Z24Loader(CustomDataLoader, Dataset):
     
     # Same as ShearBuildingLoader get_instances 
     # TODO: place it in the super class CustomDataLoader
-    def get_data_instances(self, train, nbr_epochs):
+    def get_data_instances(self, train_test_all, nbr_epochs):
         
         samples_per_epoch  = self.epoch_size
         channels_epochs_sample = self.define_epochs() # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
@@ -362,11 +359,11 @@ class Z24Loader(CustomDataLoader, Dataset):
         nbr_inst = self.instances.shape[0]
         num_elements = int(0.9 * nbr_inst) # for training data we use 70%
         selected_indices = np.random.choice(nbr_inst, size=num_elements, replace=False)
-        if train:
+        if train_test_all == 0:
             subset_train = self.instances[selected_indices]
             self.labels = self.labels[selected_indices]
             self.instances = subset_train
-        else:
+        elif train_test_all == 1:
             # get the numbers not in selected_indices
             not_selected = np.setdiff1d(np.arange(nbr_inst), selected_indices)
             subset_test = self.instances[not_selected]
