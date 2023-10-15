@@ -1,13 +1,12 @@
 *.jpg
+*.jpeg
 *.png
 *.pdf
 visualize.ipynb
 exploratory_data_analysis.ipynb
 *.npy
-<<<<<<< HEAD
+*.json
 *.pth
-=======
->>>>>>> a8f2bee55f215aa71153ca9c11f75a61828bf040
 /.ipynb_checkpoints/
 /__pycache__/
 /code/

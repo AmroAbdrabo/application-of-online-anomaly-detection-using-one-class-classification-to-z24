@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
-from dataloader import ShearBuildingLoader
+from dataloader import ShearBuildingLoader, BuildingLoader
 import torch
 from torchviz import make_dot
 from dataloader import Z24Loader
@@ -117,18 +117,21 @@ def transform_epoch(epoch, fs):
     return pcolormesh_to_array(quadmesh)
 
 if __name__ == "__main__":
-    building_type = 0 # set to 0 for shear loader, for Z24 set to any other value
+    building_type = 2 # set to 0 for shear loader, for Z24 set to 1, for building set to any other value
     
     # size of each epoch (continuous segment/chunk of samples)
     z24_epoch_size = 16384
     shear_epoch_size = 2048 # should probably be smaller for shear since we have less data there
+    building_epoch_size = 16384
 
     z24_fs = 100 # sampling rate for z24
     shear_fs = 4096 #  .. and for shear building
+    building_fs = 200
 
     # Create the dataset and dataloader
     dataset_train = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
-        building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
+        building_type == 0 else  Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs)) if \
+        building_type == 1 else BuildingLoader(building_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
     dataset_train.get_data_instances(0, 1) 
     print(f"Training on {dataset_train.instances.shape[0]} instances")
 
