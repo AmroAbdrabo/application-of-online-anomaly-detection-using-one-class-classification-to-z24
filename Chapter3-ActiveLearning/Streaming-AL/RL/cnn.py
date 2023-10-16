@@ -117,7 +117,7 @@ def transform_epoch(epoch, fs):
     return pcolormesh_to_array(quadmesh)
 
 if __name__ == "__main__":
-    building_type = 2 # set to 0 for shear loader, for Z24 set to 1, for building set to any other value
+    building_type = 1 # set to 0 for shear loader, for Z24 set to 1, for building set to any other value
     
     # size of each epoch (continuous segment/chunk of samples)
     z24_epoch_size = 16384
