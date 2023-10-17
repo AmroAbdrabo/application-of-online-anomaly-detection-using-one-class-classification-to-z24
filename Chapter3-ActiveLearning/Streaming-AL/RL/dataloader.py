@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 import sys
 import os
+import gc
 
 class CustomDataLoader:
     def __init__(self, channels, epoch_size, epoch_transform, path):
@@ -417,6 +418,7 @@ class LUMODataset(CustomDataLoader, Dataset):
             # detrend then bandpass filter
             x = np.apply_along_axis(lambda r: CustomDataLoader.bandpass_filter(detrend(r), 0.5, 120, 1651, order = 4), 1, x)
             x = x[::2, ::2] # keep only 11 channels and reduce sampling rate to 1651/2 = 825.5
+            gc.collect()  # Call garbage collection after processing the file
             # x.shape is (22, 990600) so we must transpose it 
             return x.transpose()
 
@@ -453,9 +455,12 @@ class LUMODataset(CustomDataLoader, Dataset):
 
                 samples_by_chnl_all.append(samples_by_channel_file)
                 labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
+            
+            gc.collect()  # Call garbage collection at the end of each iteration
 
         self.samples_by_channel = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
         np.save("lumo_samp_by_chnl.npy", self.samples_by_channel)
+        gc.collect()  # Call garbage collection at the end of the function
 
     def __len__(self):
         return self.instances.shape[0]
