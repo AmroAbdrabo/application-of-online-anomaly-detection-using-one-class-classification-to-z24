@@ -127,7 +127,7 @@ class CustomDataLoader:
 
 class ShearBuildingLoader(Dataset, CustomDataLoader):
     def __init__(self, epoch_size, epoch_transform):
-        super().__init__(6, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
+        CustomDataLoader.__init__(6, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
         self.message = "Shearloader"
         self.split = 0.7
 
@@ -202,7 +202,7 @@ Z24_HEALTHY_STATES = np.arange(8)
 
 class Z24Loader(CustomDataLoader, Dataset):
     def __init__(self, epoch_size, epoch_transform):
-        super().__init__(5, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
+        CustomDataLoader.__init__(5, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
         sys.path.append('.\\Chapter2-Z24-dataset')
         self.message = "Z24"
         self.split = 0.9 # percent of training data
@@ -323,7 +323,7 @@ class Z24Loader(CustomDataLoader, Dataset):
 # Based on the data provided by Yves
 class BuildingLoader(Dataset, CustomDataLoader):
     def __init__(self, epoch_size, epoch_transform):
-        super().__init__(3, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\ASCE_benchmark.json")
+        CustomDataLoader.__init__(3, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\ASCE_benchmark.json")
         self.message = "Building dataloader"
         self.split = 0.7 # percent of training data
 
@@ -354,6 +354,93 @@ class BuildingLoader(Dataset, CustomDataLoader):
 
         # save for later
         np.save("yves_samp_by_chnl.npy", self.samples_by_channel)
+
+    def __len__(self):
+        return self.instances.shape[0]
+
+    def __getitem__(self, idx):
+        return self.instances[idx], self.labels[idx]
+    
+
+class LUMODataset(CustomDataLoader, Dataset):
+    def __init__(self, epoch_size, epoch_transform):
+        CustomDataLoader.__init__(self, 22, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
+        self.message = "LUMO"
+        self.split = 0.7 # percent of training data
+        self.file_to_state = dict() # mapping of measurement file to state of the tower
+
+        # We use measurements form October 2020 only since all data would be too much and because October contains healthy and damaged
+        self.meta_file = "C:\\Users\\amroa\\Documents\\thesis\\LUMO\\SHMTS_202010_meta_struct.mat"
+        
+        # where the actual measurements are stored
+        self.structural_data_root = "D:\\LUMO\\10" # 10 for October
+
+        # read the state of the files (state of the building being measured in the files)
+        self.read_file_to_state()
+
+    @staticmethod
+    def convert_ascii_to_str(ascii_list):
+    # Convert a list of ASCII values to a string
+        return ''.join(chr(int(val)) for val in ascii_list) 
+
+    def read_file_to_state(self):
+        import h5py
+        with h5py.File(self.meta_file, 'r') as file:
+            # Let's print the keys available in the file to know its structure
+            for key in file.keys():
+                print(key)
+            
+            # Checking if 'Dat' is a key in the file
+            if 'Dat' in file:
+                dat_group = file['Dat']
+            
+                # Printing keys within the 'Dat' group
+                for key in dat_group.keys():
+                    print(key)
+                    
+                    # If the key is "Info", and it's a Dataset, then extract its content
+                    item = dat_group[key]
+                    if isinstance(item, h5py.Dataset) and key == "Info":
+                        #print(f"Dataset {key} shape: {item.shape}"
+                        # Iterate over each measurement
+                        for col_idx in range(item.shape[1]):
+                            folder_ref, state_ref = item[:, col_idx]
+                            folder_name_ascii = file[folder_ref][()]
+                            folder_name = LUMODataset.convert_ascii_to_str(folder_name_ascii.flatten())
+                            
+                            state_number = file[state_ref][()]
+                            
+                            #print(f"Measurement {col_idx+1}: Folder Name = {folder_name}, State Number = {state_number[0]}")
+                            self.file_to_state[folder_name] = int(state_number[0][0])
+
+    def get_samples_by_channels_file(self, file):
+        import h5py
+        with h5py.File(file, 'r') as file:    
+            dat_group = file['Dat']
+            dat_group_2 = file['Dat']['Data']
+            x = dat_group_2[:]
+            # x.shape is (22, 990600)
+            return x.transpose()
+
+    def get_samples_by_channels(self):
+        # check if it was already computed
+        try:
+            lumo_samp_by_chnl = np.load("lumo_samp_by_chnl.npy")
+            self.samples_by_channel = lumo_samp_by_chnl
+            return 
+        except:
+            print("Could not read pickled lumo_samp_by_chnl.npy")
+
+        samples_by_chnl_all = []
+        for key in self.file_to_state: # each key is a filename
+            # get samples_by_channels for the particular file 
+            file_structural = os.path.join(self.structural_data_root, key) + ".mat"
+            samples_by_channel_file = self.get_samples_by_channels_file(key)
+            samples_by_chnl_all.append(samples_by_channel_file)
+
+        self.samples_by_channel = np.vstack(samples_by_chnl_all)
+        np.save("lumo_samp_by_chnl.npy", self.samples_by_channel)
+
 
     def __len__(self):
         return self.instances.shape[0]
