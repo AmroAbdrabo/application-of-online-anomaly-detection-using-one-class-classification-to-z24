@@ -369,7 +369,7 @@ class LUMODataset(CustomDataLoader, Dataset):
         self.split = 0.7 # percent of training data
         self.file_to_state = dict() # mapping of measurement file to state of the tower
 
-        # We use measurements form October 2020 only since all data would be too much and because October contains healthy and damaged
+        # We use measurements from October 2020 only since all data would be too much and because October contains healthy and damaged
         self.meta_file = "C:\\Users\\amroa\\Documents\\thesis\\LUMO\\SHMTS_202010_meta_struct.mat"
         
         # where the actual measurements are stored
