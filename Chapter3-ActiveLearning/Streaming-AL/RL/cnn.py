@@ -123,7 +123,7 @@ if __name__ == "__main__":
     z24_epoch_size = 16384
     shear_epoch_size = 2048 # should probably be smaller for shear since we have less data there
     building_epoch_size = 16384
-    lumo_epoch_size = 16384 * (1651/100) # same 2.7 min as for Z24 but since SR is greater for LUMO than Z24 we need to increase accordingly
+    lumo_epoch_size = int(16384 * (412.75/100)) # same 2.7 min as for Z24 but since SR is greater for LUMO than Z24 we need to increase accordingly
 
     z24_fs = 100 # sampling rate for z24
     shear_fs = 4096 #  .. and for shear building

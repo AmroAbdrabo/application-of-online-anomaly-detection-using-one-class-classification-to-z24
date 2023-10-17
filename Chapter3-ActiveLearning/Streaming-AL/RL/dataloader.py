@@ -62,12 +62,16 @@ class CustomDataLoader:
 
         # define a wraparound in case the samples per epoch do not evenly divide the number of samples
         nbr_samples = data.shape[0]
+        print(nbr_samples)
+        print(samples_per_epoch)
         wraparound_amt = samples_per_epoch - (nbr_samples % samples_per_epoch) 
         new_len = nbr_samples + wraparound_amt if (nbr_samples % samples_per_epoch) != 0 else nbr_samples
 
         # technically no wraparound should be generated for Z24 as the method get_dataframes ensures that all lengths are powers of 2
         if (nbr_samples % samples_per_epoch) != 0:
             print("Wrap-around occurred")
+            print(type(wraparound_amt))
+            print(wraparound_amt)
             wraparound = self.samples_by_channel[0:wraparound_amt, :]
             self.samples_by_channel = np.vstack(( self.samples_by_channel, wraparound ))
             data = self.samples_by_channel[:, :-1]
@@ -437,42 +441,86 @@ class LUMODataset(CustomDataLoader, Dataset):
     def get_samples_by_channels(self):
         # check if it was already computed
         try:
-            lumo_samp_by_chnl = np.load("lumo_samp_by_chnl.npy")
-            self.samples_by_channel = lumo_samp_by_chnl
+            all_days = [np.load(f"lumo_{date}_samp_by_chnl.npy") for date in self.measured_dates]
+            self.samples_by_channel = np.vstack(all_days) # most likely will not even get to this part
+            print(self.samples_by_channel.shape)
             return 
         
         except:
             print("Could not read pickled lumo_samp_by_chnl.npy")
 
-        samples_by_chnl_all = []
-        labels_all = []
+        
         checkpoint = 0 # checkpoint is assuming a file fetch fails. Assume at iter=2 a fetch fails. Then set this to 2 
         iter = -1
-        iterations =  len(self.file_to_state)
-        for filename, state in self.file_to_state.items(): # each key is a filename
-            iter = iter + 1
-            if (state < 2) or (iter < checkpoint):
-                # if data is not classified or is corrupted
-                continue
-            #if iter < 250 or iter >= iterations//2: #  we only take 500 files out of 3,821 to avoid storage issues
-            # get samples_by_channels for the particular file 
-            file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
+        for date in self.measured_dates:
+            samples_by_chnl_all = [] # for a single day 
+            labels_all = [] #  likewise just for a day
+            print(f"Processing day {date}")
+            keys = [key for key in self.file_to_state if key.startswith(date)]
+            for filename in keys: # each key is a filename
+                # update current loop count
+                iter = iter + 1
+                state = self.file_to_state[filename]
 
-            try:
-                samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
-            except:
-                print("Error occurred during .mat file fetch. Checkpointing progress up to but not including iteration {iter}...")
-                checkpoint = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
-                np.save(f"lumo_{iter}_samp_by_chnl.npy", checkpoint)
+                if (state < 2) or (iter < checkpoint):
+                    # if data is not classified or is corrupted
+                    continue
+                
+                # get samples_by_channels for the particular file 
+                file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
 
-            samples_by_chnl_all.append(samples_by_channel_file)
-            labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
-            
-            gc.collect()  # Call garbage collection at the end of each iteration
+                try:
+                    samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
+                except:
+                    print("Error occurred during .mat file fetch. Checkpointing progress up to but not including iteration {iter}...")
+                    checkpoint = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
+                    np.save(f"lumo_{iter}_samp_by_chnl.npy", checkpoint)
 
-        self.samples_by_channel = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
-        np.save("lumo_samp_by_chnl.npy", self.samples_by_channel)
-        gc.collect()  # Call garbage collection at the end of the function
+                samples_by_chnl_all.append(samples_by_channel_file)
+                labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
+                
+                gc.collect()  # Call garbage collection at the end of each iteration
+
+            samples_by_channel = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
+            np.save(f"lumo_{date}_samp_by_chnl.npy", samples_by_channel)
+            gc.collect()  # Call garbage collection at the end of the function
+        
+        # now if everything works
+        all_days = [np.load(f"lumo_{date}_samp_by_chnl.npy") for date in self.measured_dates]
+        self.samples_by_channel = np.vstack(all_days) # most likely will not even get to this part
+
+    # less memory intensive version, which saves images then loads them
+    def define_epochs(self):
+        if self.samples_by_channel is None:
+            self.get_samples_by_channels()
+
+        samples_per_epoch = self.epoch_size
+        nbr_samples = self.samples_by_channel.shape[0]
+        wraparound_amt = samples_per_epoch - (nbr_samples % samples_per_epoch) 
+
+        if (nbr_samples % samples_per_epoch) != 0:
+            print("Wrap-around occurred")
+            wraparound = self.samples_by_channel[:wraparound_amt, :]
+            self.samples_by_channel = np.vstack((self.samples_by_channel, wraparound))
+        else:
+            wraparound_amt = 0
+
+        new_len = nbr_samples + wraparound_amt
+        nbr_segs = new_len // samples_per_epoch
+
+        print(f"Epochs for {self.channels} {self.message}")
+        
+        # classical for loop because memory is becoming problematic
+        for i in range(self.channels):
+            row_nbr = 0
+            for row in self.samples_by_channel[:, i].reshape((nbr_segs, samples_per_epoch)):
+                img = self.epoch_transform(row)
+                np.save("img_ch_{i}_row_{row_nbr}.npy", img)
+
+
+    def get_data_instances(self, train_test_all, nbr_epochs):
+        # does absolutely nothing since memory is a severe problem
+        pass 
 
     def __len__(self):
         return self.instances.shape[0]
