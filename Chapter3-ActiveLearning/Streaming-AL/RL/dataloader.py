@@ -364,7 +364,7 @@ class BuildingLoader(Dataset, CustomDataLoader):
 
 class LUMODataset(CustomDataLoader, Dataset):
     def __init__(self, epoch_size, epoch_transform):
-        CustomDataLoader.__init__(self, 22, epoch_size, epoch_transform, None)
+        CustomDataLoader.__init__(self, 11, epoch_size, epoch_transform, None)
         self.message = "LUMO"
         self.split = 0.7 # percent of training data
         self.file_to_state = dict() # mapping of measurement file to state of the tower
@@ -373,7 +373,7 @@ class LUMODataset(CustomDataLoader, Dataset):
         self.meta_file = "C:\\Users\\amroa\\Documents\\thesis\\LUMO\\SHMTS_202010_meta_struct.mat"
         
         # where the actual measurements are stored
-        self.structural_data_root = "D:\\LUMO\\2020\\10" # 10 for October
+        self.structural_data_root = "D:\\LUMO\\10\\2020\\10" # 10 for October
 
         # read the state of the files (state of the building being measured in the files)
         self.read_file_to_state()
@@ -386,18 +386,12 @@ class LUMODataset(CustomDataLoader, Dataset):
     def read_file_to_state(self):
         import h5py
         with h5py.File(self.meta_file, 'r') as file:
-            # Let's print the keys available in the file to know its structure
-            for key in file.keys():
-                print(key)
-            
             # Checking if 'Dat' is a key in the file
             if 'Dat' in file:
                 dat_group = file['Dat']
             
                 # Printing keys within the 'Dat' group
                 for key in dat_group.keys():
-                    print(key)
-                    
                     # If the key is "Info", and it's a Dataset, then extract its content
                     item = dat_group[key]
                     if isinstance(item, h5py.Dataset) and key == "Info":
@@ -414,13 +408,15 @@ class LUMODataset(CustomDataLoader, Dataset):
                             self.file_to_state[folder_name] = int(state_number[0][0])
 
     def get_samples_by_channels_file(self, file):
+        print(f"Getting samples of file {file}")
         import h5py
         from scipy.signal import detrend
-        with h5py.File(file, 'r') as file:    
+        with h5py.File(file, 'r') as file: 
             dat_group = file['Dat']['Data']
             x = dat_group[:]
             # detrend then bandpass filter
             x = np.apply_along_axis(lambda r: CustomDataLoader.bandpass_filter(detrend(r), 0.5, 120, 1651, order = 4), 1, x)
+            x = x[::2, ::2] # keep only 11 channels and reduce sampling rate to 1651/2 = 825.5
             # x.shape is (22, 990600) so we must transpose it 
             return x.transpose()
 
@@ -436,16 +432,27 @@ class LUMODataset(CustomDataLoader, Dataset):
 
         samples_by_chnl_all = []
         labels_all = []
+        checkpoint = 0 # checkpoint is assuming a file fetch fails. Assume at iter=2 a fetch fails. Then set this to 2 
+        iter = -1
+        iterations =  len(self.file_to_state)
         for filename, state in self.file_to_state.items(): # each key is a filename
-            if state < 2:
+            iter = iter + 1
+            if (state < 2) or (iter < checkpoint):
                 # if data is not classified or is corrupted
                 continue
+            if iter < 250 or iter >= iterations - 250: #  we only take 500 files out of 3,821 to avoid storage issues
+                # get samples_by_channels for the particular file 
+                file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
 
-            # get samples_by_channels for the particular file 
-            file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
-            samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
-            samples_by_chnl_all.append(samples_by_channel_file)
-            labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
+                try:
+                    samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
+                except:
+                    print("Error occurred during .mat file fetch. Checkpointing progress up to but not including iteration {iter}...")
+                    checkpoint = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
+                    np.save("lumo_{iter}_samp_by_chnl.npy", checkpoint)
+
+                samples_by_chnl_all.append(samples_by_channel_file)
+                labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
 
         self.samples_by_channel = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
         np.save("lumo_samp_by_chnl.npy", self.samples_by_channel)

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
-from dataloader import ShearBuildingLoader, BuildingLoader
+from dataloader import ShearBuildingLoader, BuildingLoader, LUMODataset
 import torch
 from torchviz import make_dot
 from dataloader import Z24Loader
@@ -117,26 +117,29 @@ def transform_epoch(epoch, fs):
     return pcolormesh_to_array(quadmesh)
 
 if __name__ == "__main__":
-    building_type = 1 # set to 0 for shear loader, for Z24 set to 1, for building set to any other value
+    building_type = 2 # set to 0 for shear loader, for Z24 set to 1, 2 for LUMO
     
     # size of each epoch (continuous segment/chunk of samples)
     z24_epoch_size = 16384
     shear_epoch_size = 2048 # should probably be smaller for shear since we have less data there
     building_epoch_size = 16384
+    lumo_epoch_size = 16384 * (1651/100) # same 2.7 min as for Z24 but since SR is greater for LUMO than Z24 we need to increase accordingly
 
     z24_fs = 100 # sampling rate for z24
     shear_fs = 4096 #  .. and for shear building
     building_fs = 200
+    lumo_fs = 1651
 
     # Create the dataset and dataloader
     dataset_train = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else  Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs)) if \
-        building_type == 1 else BuildingLoader(building_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
+        building_type == 1 else LUMODataset(lumo_epoch_size, lambda epoch: transform_epoch(epoch, lumo_fs)) if building_type == 2 else None
     dataset_train.get_data_instances(0, 1) 
     print(f"Training on {dataset_train.instances.shape[0]} instances")
 
     dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
-        building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
+        building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs)) if \
+        building_type == 1 else LUMODataset(lumo_epoch_size, lambda epoch: transform_epoch(epoch, lumo_fs)) if building_type == 2 else None
     dataset_test.get_data_instances(1, 1) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
 
     torch.cuda.empty_cache()
@@ -144,7 +147,7 @@ if __name__ == "__main__":
     test_dataloader = DataLoader(dataset_test, batch_size=4, shuffle=True)
 
     # visualize one training instance
-    visualize_instance = False # set to true to visualize 
+    visualize_instance = True # set to true to visualize 
 
     if visualize_instance:
         img_data, label = dataset_train.__getitem__(4)
