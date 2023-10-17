@@ -515,7 +515,9 @@ class LUMODataset(CustomDataLoader, Dataset):
             row_nbr = 0
             for row in self.samples_by_channel[:, i].reshape((nbr_segs, samples_per_epoch)):
                 img = self.epoch_transform(row)
-                np.save("img_ch_{i}_row_{row_nbr}.npy", img)
+                np.save("./LUMO_images/img_ch_{i}_row_{row_nbr}.npy", img)
+
+        print("Saving images done")
 
 
     def get_data_instances(self, train_test_all, nbr_epochs):
