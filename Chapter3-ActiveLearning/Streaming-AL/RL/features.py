@@ -8,11 +8,12 @@ from dataloader import ShearBuildingLoader
 
 # Stores the features produced by CNN from cnn.py (after model has trained)
 if __name__ == "__main__":
-    building_type = 1 # set to 0 for shear loader, for Z24 set to any other value
+    building_type = 2 # set to 0 for shear loader, 1 for Z24, 2 for LUMO
     
     # size of each epoch (continuous segment/chunk of samples)
     z24_epoch_size = 16384
     shear_epoch_size = 16384 # should probably be smaller for shear since we have less data there
+    lumo_epoch_size = int(16384 * (1651/100)) # ~270499
 
     z24_fs = 100 # sampling rate for z24
     shear_fs = 4096 #  .. and for shear building

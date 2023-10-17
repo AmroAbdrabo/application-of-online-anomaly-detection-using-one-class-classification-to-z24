@@ -66,7 +66,7 @@ class CustomDataLoader:
 
         # technically no wraparound should be generated for Z24 as the method get_dataframes ensures that all lengths are powers of 2
         if (nbr_samples % samples_per_epoch) != 0:
-            print("ERROR: wrap-around occurred")
+            print("Wrap-around occurred")
             wraparound = self.samples_by_channel[0:wraparound_amt, :]
             self.samples_by_channel = np.vstack(( self.samples_by_channel, wraparound ))
             data = self.samples_by_channel[:, :-1]
@@ -373,7 +373,7 @@ class LUMODataset(CustomDataLoader, Dataset):
         self.meta_file = "C:\\Users\\amroa\\Documents\\thesis\\LUMO\\SHMTS_202010_meta_struct.mat"
         
         # where the actual measurements are stored
-        self.structural_data_root = "D:\\LUMO\\10" # 10 for October
+        self.structural_data_root = "D:\\LUMO\\2020\\10" # 10 for October
 
         # read the state of the files (state of the building being measured in the files)
         self.read_file_to_state()
@@ -415,9 +415,12 @@ class LUMODataset(CustomDataLoader, Dataset):
 
     def get_samples_by_channels_file(self, file):
         import h5py
+        from scipy.signal import detrend
         with h5py.File(file, 'r') as file:    
             dat_group = file['Dat']['Data']
             x = dat_group[:]
+            # detrend then bandpass filter
+            x = np.apply_along_axis(lambda r: CustomDataLoader.bandpass_filter(detrend(r), 0.5, 120, 1651, order = 4), 1, x)
             # x.shape is (22, 990600) so we must transpose it 
             return x.transpose()
 
@@ -434,11 +437,15 @@ class LUMODataset(CustomDataLoader, Dataset):
         samples_by_chnl_all = []
         labels_all = []
         for filename, state in self.file_to_state.items(): # each key is a filename
+            if state < 2:
+                # if data is not classified or is corrupted
+                continue
+
             # get samples_by_channels for the particular file 
             file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
             samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
             samples_by_chnl_all.append(samples_by_channel_file)
-            labels_all.append(np.full(samples_by_channel_file.shape[0], state))
+            labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
 
         self.samples_by_channel = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
         np.save("lumo_samp_by_chnl.npy", self.samples_by_channel)
