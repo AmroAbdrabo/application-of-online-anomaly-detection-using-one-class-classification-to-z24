@@ -419,7 +419,7 @@ class LUMODataset(CustomDataLoader, Dataset):
             dat_group = file['Dat']
             dat_group_2 = file['Dat']['Data']
             x = dat_group_2[:]
-            # x.shape is (22, 990600)
+            # x.shape is (22, 990600) so we must transpose it 
             return x.transpose()
 
     def get_samples_by_channels(self):
@@ -428,17 +428,20 @@ class LUMODataset(CustomDataLoader, Dataset):
             lumo_samp_by_chnl = np.load("lumo_samp_by_chnl.npy")
             self.samples_by_channel = lumo_samp_by_chnl
             return 
+        
         except:
             print("Could not read pickled lumo_samp_by_chnl.npy")
 
         samples_by_chnl_all = []
-        for key in self.file_to_state: # each key is a filename
+        labels_all = []
+        for filename, state in self.file_to_state.items(): # each key is a filename
             # get samples_by_channels for the particular file 
-            file_structural = os.path.join(self.structural_data_root, key) + ".mat"
-            samples_by_channel_file = self.get_samples_by_channels_file(key)
+            file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
+            samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
             samples_by_chnl_all.append(samples_by_channel_file)
+            labels_all.append(np.full(samples_by_channel_file.shape[0], state))
 
-        self.samples_by_channel = np.vstack(samples_by_chnl_all)
+        self.samples_by_channel = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
         np.save("lumo_samp_by_chnl.npy", self.samples_by_channel)
 
 
