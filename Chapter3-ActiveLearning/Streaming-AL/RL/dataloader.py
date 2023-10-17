@@ -127,7 +127,7 @@ class CustomDataLoader:
 
 class ShearBuildingLoader(Dataset, CustomDataLoader):
     def __init__(self, epoch_size, epoch_transform):
-        CustomDataLoader.__init__(6, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
+        CustomDataLoader.__init__(self, 6, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\sheartable")
         self.message = "Shearloader"
         self.split = 0.7
 
@@ -202,7 +202,7 @@ Z24_HEALTHY_STATES = np.arange(8)
 
 class Z24Loader(CustomDataLoader, Dataset):
     def __init__(self, epoch_size, epoch_transform):
-        CustomDataLoader.__init__(5, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
+        CustomDataLoader.__init__(self, 5, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
         sys.path.append('.\\Chapter2-Z24-dataset')
         self.message = "Z24"
         self.split = 0.9 # percent of training data
@@ -323,7 +323,7 @@ class Z24Loader(CustomDataLoader, Dataset):
 # Based on the data provided by Yves
 class BuildingLoader(Dataset, CustomDataLoader):
     def __init__(self, epoch_size, epoch_transform):
-        CustomDataLoader.__init__(3, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\ASCE_benchmark.json")
+        CustomDataLoader.__init__(self, 3, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\ASCE_benchmark.json")
         self.message = "Building dataloader"
         self.split = 0.7 # percent of training data
 
@@ -364,7 +364,7 @@ class BuildingLoader(Dataset, CustomDataLoader):
 
 class LUMODataset(CustomDataLoader, Dataset):
     def __init__(self, epoch_size, epoch_transform):
-        CustomDataLoader.__init__(self, 22, epoch_size, epoch_transform, "C:\\Users\\amroa\\Documents\\thesis\\data")
+        CustomDataLoader.__init__(self, 22, epoch_size, epoch_transform, None)
         self.message = "LUMO"
         self.split = 0.7 # percent of training data
         self.file_to_state = dict() # mapping of measurement file to state of the tower
@@ -416,9 +416,8 @@ class LUMODataset(CustomDataLoader, Dataset):
     def get_samples_by_channels_file(self, file):
         import h5py
         with h5py.File(file, 'r') as file:    
-            dat_group = file['Dat']
-            dat_group_2 = file['Dat']['Data']
-            x = dat_group_2[:]
+            dat_group = file['Dat']['Data']
+            x = dat_group[:]
             # x.shape is (22, 990600) so we must transpose it 
             return x.transpose()
 
@@ -443,7 +442,6 @@ class LUMODataset(CustomDataLoader, Dataset):
 
         self.samples_by_channel = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
         np.save("lumo_samp_by_chnl.npy", self.samples_by_channel)
-
 
     def __len__(self):
         return self.instances.shape[0]
