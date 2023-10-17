@@ -514,7 +514,8 @@ class LUMODataset(CustomDataLoader, Dataset):
         print(f"Epochs for {self.channels} {self.message}")
         
         # classical for loop because memory is becoming problematic
-        for i in range(self.channels):
+        #for i in range(self.channels):
+        for i in range(0, 6): # otherwise it's just too many channels
             row_nbr = 0
             for row in self.samples_by_channel[:, i].reshape((nbr_segs, samples_per_epoch)):
                 img = self.epoch_transform(row)
@@ -522,6 +523,8 @@ class LUMODataset(CustomDataLoader, Dataset):
                 image_data = (img * 255).astype(np.uint8)
                 image = Image.fromarray(image_data, 'RGB')  # Specify 'RGB' mode
                 image.save(f"D:\\LUMO\\IMG\\img_ch_{i}_row_{row_nbr}.png")
+                row_nbr = row_nbr + 1
+            gc.collect()
 
         print("Saving images done")
 
