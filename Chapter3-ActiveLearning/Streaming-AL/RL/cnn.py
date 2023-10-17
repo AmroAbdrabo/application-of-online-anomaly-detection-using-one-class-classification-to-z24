@@ -128,14 +128,14 @@ if __name__ == "__main__":
     z24_fs = 100 # sampling rate for z24
     shear_fs = 4096 #  .. and for shear building
     building_fs = 200
-    lumo_fs = 1651
+    lumo_fs = 412.75 # it was 1651 but I reduced by taking it every 4th sample
 
     # Create the dataset and dataloader
     dataset_train = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else  Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs)) if \
         building_type == 1 else LUMODataset(lumo_epoch_size, lambda epoch: transform_epoch(epoch, lumo_fs)) if building_type == 2 else None
     dataset_train.get_data_instances(0, 1) 
-    print(f"Training on {dataset_train.instances.shape[0]} instances")
+    #print(f"Training on {dataset_train.instances.shape[0]} instances")
 
     dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs)) if \

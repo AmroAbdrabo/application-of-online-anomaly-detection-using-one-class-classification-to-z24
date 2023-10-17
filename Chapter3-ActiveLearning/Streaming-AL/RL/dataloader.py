@@ -8,6 +8,7 @@ import torch
 import sys
 import os
 import gc
+from PIL import Image
 
 class CustomDataLoader:
     def __init__(self, channels, epoch_size, epoch_transform, path):
@@ -385,6 +386,8 @@ class LUMODataset(CustomDataLoader, Dataset):
 
         # read the state of the files (state of the building being measured in the files)
         self.read_file_to_state()
+        
+        print("Done")
 
     @staticmethod
     def convert_ascii_to_str(ascii_list):
@@ -515,17 +518,21 @@ class LUMODataset(CustomDataLoader, Dataset):
             row_nbr = 0
             for row in self.samples_by_channel[:, i].reshape((nbr_segs, samples_per_epoch)):
                 img = self.epoch_transform(row)
-                np.save("./LUMO_images/img_ch_{i}_row_{row_nbr}.npy", img)
+                #np.save(f"D:\\LUMO\\IMG\\img_ch_{i}_row_{row_nbr}.npy", img)
+                image_data = (img * 255).astype(np.uint8)
+                image = Image.fromarray(image_data, 'RGB')  # Specify 'RGB' mode
+                image.save(f"D:\\LUMO\\IMG\\img_ch_{i}_row_{row_nbr}.png")
 
         print("Saving images done")
 
 
     def get_data_instances(self, train_test_all, nbr_epochs):
+        self.define_epochs()
         # does absolutely nothing since memory is a severe problem
-        pass 
+        return
 
     def __len__(self):
-        return self.instances.shape[0]
+        pass
 
     def __getitem__(self, idx):
-        return self.instances[idx], self.labels[idx]
+        pass
