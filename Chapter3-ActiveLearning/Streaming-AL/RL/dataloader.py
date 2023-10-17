@@ -376,6 +376,9 @@ class LUMODataset(CustomDataLoader, Dataset):
         # where the actual measurements are stored
         self.structural_data_root = "D:\\LUMO\\10\\2020\\10" # 10 for October
 
+        # given the size of this dataset, we only use specific days (each day is 144 files so we are sparing with the days)
+        self.measured_dates = [LUMODataset.date_generate(2020, 10, i) for i in [1, 2, 3, 14, 15, 16]]
+
         # read the state of the files (state of the building being measured in the files)
         self.read_file_to_state()
 
@@ -406,7 +409,16 @@ class LUMODataset(CustomDataLoader, Dataset):
                             state_number = file[state_ref][()]
                             
                             #print(f"Measurement {col_idx+1}: Folder Name = {folder_name}, State Number = {state_number[0]}")
-                            self.file_to_state[folder_name] = int(state_number[0][0])
+                            if any([folder_name.startswith(x) for x in self.measured_dates]): # only keep allowed dates
+                                self.file_to_state[folder_name] = int(state_number[0][0])
+
+    @staticmethod
+    def date_generate(year, month, day):
+        """
+        Generate a string of the format SHMTS_YYYYMMDDHHMM
+        using the provided year, month, day, hour, and minute.
+        """
+        return f"SHMTS_{year:04}{month:02}{day:02}"
 
     def get_samples_by_channels_file(self, file):
         print(f"Getting samples of file {file}")
@@ -416,8 +428,8 @@ class LUMODataset(CustomDataLoader, Dataset):
             dat_group = file['Dat']['Data']
             x = dat_group[:]
             # detrend then bandpass filter
-            x = np.apply_along_axis(lambda r: CustomDataLoader.bandpass_filter(detrend(r), 0.5, 120, 1651, order = 4), 1, x)
-            x = x[::2, ::2] # keep only 11 channels and reduce sampling rate to 1651/2 = 825.5
+            x = x[::2, ::4] # keep only 11 channels and reduce sampling rate to 1651/4 = 412.75
+            x = np.apply_along_axis(lambda r: CustomDataLoader.bandpass_filter(detrend(r), 0.5, 120, 412.75, order = 4), 1, x)
             gc.collect()  # Call garbage collection after processing the file
             # x.shape is (22, 990600) so we must transpose it 
             return x.transpose()
@@ -442,19 +454,19 @@ class LUMODataset(CustomDataLoader, Dataset):
             if (state < 2) or (iter < checkpoint):
                 # if data is not classified or is corrupted
                 continue
-            if iter < 250 or iter >= iterations - 250: #  we only take 500 files out of 3,821 to avoid storage issues
-                # get samples_by_channels for the particular file 
-                file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
+            #if iter < 250 or iter >= iterations//2: #  we only take 500 files out of 3,821 to avoid storage issues
+            # get samples_by_channels for the particular file 
+            file_structural = os.path.join(self.structural_data_root, filename) + ".mat"
 
-                try:
-                    samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
-                except:
-                    print("Error occurred during .mat file fetch. Checkpointing progress up to but not including iteration {iter}...")
-                    checkpoint = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
-                    np.save("lumo_{iter}_samp_by_chnl.npy", checkpoint)
+            try:
+                samples_by_channel_file = self.get_samples_by_channels_file(file_structural)
+            except:
+                print("Error occurred during .mat file fetch. Checkpointing progress up to but not including iteration {iter}...")
+                checkpoint = np.hstack([np.vstack(samples_by_chnl_all), np.concatenate(labels_all).reshape(-1, 1)])
+                np.save(f"lumo_{iter}_samp_by_chnl.npy", checkpoint)
 
-                samples_by_chnl_all.append(samples_by_channel_file)
-                labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
+            samples_by_chnl_all.append(samples_by_channel_file)
+            labels_all.append(np.full(samples_by_channel_file.shape[0], 0 if state==2 else 1)) # 2 refers to healthy state see readme file in https://data.uni-hannover.de/dataset/lumo/resource/bd0a6d0a-3ff3-4780-91cc-1d816ab39fb9
             
             gc.collect()  # Call garbage collection at the end of each iteration
 
