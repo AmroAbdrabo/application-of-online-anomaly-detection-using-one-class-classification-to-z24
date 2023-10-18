@@ -3,7 +3,6 @@ import os
 from PIL import Image
 
 # Combines images to form one large image from multiple channels
-
 def combine_images_vertically(image_paths, row_nbr):
     # Open the images and convert them to numpy arrays
     images = [np.asarray(Image.open(path)) for path in image_paths]

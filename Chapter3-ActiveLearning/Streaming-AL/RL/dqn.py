@@ -10,24 +10,33 @@ from collections import deque
 import copy
 from cnn import transform_epoch
 
-# returns CNN (only convolutional layers) applied to the instances of the original dataset
+# returns feature vectors obtained by CNN (only convolutional layers) applied to the instances of the original dataset
 class CNNTransformedDataset(Dataset):
-    def __init__(self, original_dataset, transform):
-        self.original_dataset = original_dataset
-        self.transform = transform
+    def __init__(self, path, train, train_split):
+        self.dataset = np.load(path)
+        self.split = train_split
+        tot_len = self.dataset.shape[0]
+        np.random.seed(42)
+        if train:
+            train_indices = np.random.choice(tot_len, size=int(self.split*tot_len), replace=False)
+            self.dataset = self.dataset[train_indices]
+        else:
+            train_indices = np.random.choice(tot_len, size=int(self.split*tot_len), replace=False)
+            test_indices  = np.setdiff1d(np.arange(tot_len), train_indices)
+            self.dataset = self.dataset[test_indices]
     
     def __len__(self):
-        return len(self.original_dataset)
+        return self.dataset.shape[0]
     
     def __getitem__(self, index):
-        instance, label = self.original_dataset[index]
-        label = -2*label + 1 # label = 0 is healthy, 1 is unhealthy but we want 1 healthy and -1 unhealthy
-        return self.transform(instance), label
+        instance_label = self.dataset[index]
+        # the last element of each row, i.e. feature vector, is the label of that feature vector
+        return instance_label[:-1], instance_label[-1]
 
 
 # The environment here is the one class classifier. Dataset here is the transformed dataset above
-class TestingEnvironment:
-    def __init__(self, model, dataset, offset, budget):
+class Environment:
+    def __init__(self, model, dataset, train_env, offset, budget):
         # the model to train on
         self.model = model
         # the model to save later
@@ -42,7 +51,12 @@ class TestingEnvironment:
         self.dataset = dataset
         # current accuracy
         self.acc = 0
+        # number of allowed queries
         self.budget = budget
+        # is it train, 0, or validation, 1, environment?
+        self.train_env = train_env
+
+        # train a model from scratch
 
     def reset(self):
         # return first state
@@ -64,7 +78,7 @@ class TestingEnvironment:
         next_inst, _ = self.dataset[self.inst]
         change_acc, score = self.train() # larger score more likely an inlier (score and change_acc produced by next state)
         done = 0
-        if self.budget == self.inst:
+        if self.budget == (self.inst - self.offset):
             done = 1
 
         return [(next_inst, score), change_acc, done]
@@ -149,34 +163,37 @@ class DQN:
 
 from dataloader import ShearBuildingLoader, Z24Loader
 from cnn import CustomResNet
+
+lumo_feat_path = "C:\\Users\\amroa\\Documents\\thesis\\resnet18_lumo_feat.npy"
 if __name__ == "__main__":
-    clf = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
+
+    clf_train_lof = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
+    clf_test_lof = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
     sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
+
     offset = 30 #  how many healthy samples we start off with
 
-    # dataset loader for building
-    z24_fs = 100
-    z24_epoch_size = 16384
-    dataset_train = Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs))
+    dataset_train = CNNTransformedDataset(path=lumo_feat_path, train=True, train_split=0.7)
+    dataset_test = CNNTransformedDataset(path=lumo_feat_path, train=False, train_split=0.7)
 
-    # load the CNN which will give the feature vectors
-    model = CustomResNet(version="50", num_classes=2).double()
-    model.load_state_dict(torch.load('model_weights.pth'))
-
-    dataset_transformed = CNNTransformedDataset(original_dataset=dataset_train, transform=model.features)
-    env = TestingEnvironment(clf, dataset_transformed, offset, sampling_budget)
+    # two environments one for training, the other validation
+    env_train = Environment(model = clf_train_lof, dataset = dataset_train, train_env=0, offset= offset, budget= sampling_budget)
+    env_test = Environment(model = clf_test_lof, dataset = dataset_test, train_env=1, offset= offset, budget= sampling_budget)
+    
     state_size = 2  # Assume a state size of 2 for simplicity
     action_size = 2  # Assume an action size of 2 for simplicity
+    
     agent = DQN(state_size, action_size)
     batch_size = 32
     episodes = 1000
+    validation_interval = 50  # validate every 50 episodes
     
 
     for e in range(episodes):
-        state = env.reset()
+        state = env_train.reset()
         for time in range(sampling_budget):  # 200 is the budget for the active learning 
             action = agent.act(state)
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done, _ = env_train.step(action)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             if done:
@@ -184,3 +201,18 @@ if __name__ == "__main__":
                 break
         if len(agent.memory) > batch_size:
             agent.replay(batch_size)
+
+        # validation phase
+        if e % validation_interval == 0:
+            total_reward = 0
+            state = env_test.reset()
+            for time in range(sampling_budget):
+                # Use the greedy policy (no exploration)
+                action = np.argmax(agent.model(torch.FloatTensor(state).float().unsqueeze(0)).detach().numpy())
+                next_state, reward, done, _ = env_test.step(action)
+                total_reward += reward
+                state = next_state
+                if done:
+                    break
+            print(f"Episode: {e}/{episodes}, Validation Reward: {total_reward}")
+        

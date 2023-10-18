@@ -172,7 +172,7 @@ if __name__ == "__main__":
             img_data.show()
 
     # Initialize the model and optimizer
-    model = CustomResNet(version="50", num_classes=2)
+    model = CustomResNet(version="18", num_classes=2)
     model = model.float()
 
     #model.load_state_dict(torch.load('model_weights.pth'))
@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {average_loss:.4f}, Accuracy: {accuracy:.2f}%")
 
-    torch.save(model.state_dict(), 'model_weights.pth')
+    torch.save(model.state_dict(), 'model_weights_R18_LUMO_2e.pth')
 
     # Plotting accuracy as function of epoch
     plt.clf() # to clear 
