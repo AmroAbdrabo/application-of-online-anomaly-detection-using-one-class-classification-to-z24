@@ -201,8 +201,8 @@ if __name__ == "__main__":
     test_accuracies = [] # test accuracies
     
 
-    # Training loop
-    num_epochs = 10
+    # Training loop (train twice)
+    num_epochs = 2
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
