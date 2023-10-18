@@ -55,18 +55,20 @@ class Environment:
         self.budget = budget
         # is it train, 0, or validation, 1, environment?
         self.train_env = train_env
-
-        # train a model from scratch
+        # start with a "warm" model
+        self.train(warm_start=True)
 
     def reset(self):
-        # return first state
+        # return first state and reset everything as in the constructor
         self.excluded = []
         self.inst = self.offset
         self.model = self.original_model
         self.original_model = copy.deepcopy(self.original_model)
+        self.train(warm_start=True)
         next_inst, _ = self.dataset[self.inst]
         _, score = self.train()
-        return (next_inst, score)
+        next_st = np.append(next_inst, score)
+        return next_st
     
     def step(self, action):
         # return next_state, reward, done
@@ -76,19 +78,18 @@ class Environment:
 
         self.inst = self.inst + 1 #  next instance
         next_inst, _ = self.dataset[self.inst]
-        change_acc, score = self.train() # larger score more likely an inlier (score and change_acc produced by next state)
+        change_acc, score = self.train(False) # larger score more likely an inlier (score and change_acc produced by next state)
         done = 0
         if self.budget == (self.inst - self.offset):
             done = 1
-
-        return [(next_inst, score), change_acc, done]
+        next_st = np.append(next_inst, score)
+        return [next_st, change_acc, done]
         
-
-    def train(self):
+    def train(self, warm_start):
         # allowed instances
-        allowed_instances = np.setdiff1d(np.arange(self.inst), self.excluded)
+        allowed_instances = np.setdiff1d(np.arange(self.inst), self.excluded) if not(warm_start) else np.arange(self.offset)
         instances, labels = self.dataset[allowed_instances]
-        self.model = self.model.fit(instances)
+        self.model.fit(instances)
         new_acc = accuracy_score(labels, self.model.predict(instances)) 
         change_acc = new_acc - self.acc
         self.acc = new_acc
@@ -116,7 +117,7 @@ class DQN:
         self.action_size = action_size
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95  # discount rate
-        self.epsilon = 1.0  # exploration rate
+        self.epsilon = 0.8  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
@@ -193,7 +194,7 @@ if __name__ == "__main__":
         state = env_train.reset()
         for time in range(sampling_budget):  # 200 is the budget for the active learning 
             action = agent.act(state)
-            next_state, reward, done, _ = env_train.step(action)
+            next_state, reward, done = env_train.step(action)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             if done:
@@ -209,7 +210,7 @@ if __name__ == "__main__":
             for time in range(sampling_budget):
                 # Use the greedy policy (no exploration)
                 action = np.argmax(agent.model(torch.FloatTensor(state).float().unsqueeze(0)).detach().numpy())
-                next_state, reward, done, _ = env_test.step(action)
+                next_state, reward, done = env_test.step(action)
                 total_reward += reward
                 state = next_state
                 if done:
