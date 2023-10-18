@@ -370,7 +370,7 @@ class BuildingLoader(Dataset, CustomDataLoader):
 
 class LUMODataset(CustomDataLoader, Dataset):
     def __init__(self, epoch_size, epoch_transform):
-        CustomDataLoader.__init__(self, 11, epoch_size, epoch_transform, None)
+        CustomDataLoader.__init__(self, 11, epoch_size, epoch_transform, None) #  mentions 11 but only 6 used for storage reasons
         self.message = "LUMO"
         self.split = 0.7 # percent of training data
         self.file_to_state = dict() # mapping of measurement file to state of the tower
@@ -386,6 +386,10 @@ class LUMODataset(CustomDataLoader, Dataset):
 
         # read the state of the files (state of the building being measured in the files)
         self.read_file_to_state()
+
+        # image directory
+        self.img_dir = "D:\\LUMO\\IMGC"
+        self.len  = len(os.listdir(self.img_dir))
         
         print("Done")
 
@@ -535,7 +539,7 @@ class LUMODataset(CustomDataLoader, Dataset):
         return
 
     def __len__(self):
-        pass
+        return self.len
 
     def __getitem__(self, idx):
         pass
