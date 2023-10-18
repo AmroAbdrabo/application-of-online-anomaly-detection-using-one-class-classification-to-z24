@@ -96,7 +96,6 @@ class CustomDataLoader:
     # DONE: place it in the super class CustomDataLoader
     def get_data_instances(self, train_test_all, nbr_epochs):
         
-        samples_per_epoch  = self.epoch_size
         channels_epochs_sample = self.define_epochs() # (d, N//s, s or (3d array in case epoch transform ret RGB image))  
         num_epochs = channels_epochs_sample.shape[1] 
         epoch_sequences = [] # stores sequences of epochs in a list
@@ -367,9 +366,11 @@ class BuildingLoader(Dataset, CustomDataLoader):
     def __getitem__(self, idx):
         return self.instances[idx], self.labels[idx]
     
+# since the LUMO labels are large we keep them once in the program
+lumo_labels = np.load("labels_lumo.npy").astype(np.float64)
 
 class LUMODataset(CustomDataLoader, Dataset):
-    def __init__(self, epoch_size, epoch_transform):
+    def __init__(self, epoch_size, epoch_transform, tensor_transform):
         CustomDataLoader.__init__(self, 11, epoch_size, epoch_transform, None) #  mentions 11 but only 6 used for storage reasons
         self.message = "LUMO"
         self.split = 0.7 # percent of training data
@@ -389,7 +390,10 @@ class LUMODataset(CustomDataLoader, Dataset):
 
         # image directory
         self.img_dir = "D:\\LUMO\\IMGC"
-        self.len  = len(os.listdir(self.img_dir))
+        self.len = None
+        self.selected_indices = None
+        self.transform = tensor_transform
+        self.mid = int(epoch_size//2)
         
         print("Done")
 
@@ -452,11 +456,9 @@ class LUMODataset(CustomDataLoader, Dataset):
             self.samples_by_channel = np.vstack(all_days) # most likely will not even get to this part
             print(self.samples_by_channel.shape)
             return 
-        
-        except:
-            print("Could not read pickled lumo_samp_by_chnl.npy")
+        except Exception as e:
+            print(f"Could not read pickled lumo_samp_by_chnl.npy. Error {e}")
 
-        
         checkpoint = 0 # checkpoint is assuming a file fetch fails. Assume at iter=2 a fetch fails. Then set this to 2 
         iter = -1
         for date in self.measured_dates:
@@ -496,7 +498,7 @@ class LUMODataset(CustomDataLoader, Dataset):
         all_days = [np.load(f"lumo_{date}_samp_by_chnl.npy") for date in self.measured_dates]
         self.samples_by_channel = np.vstack(all_days) # most likely will not even get to this part
 
-    # less memory intensive version, which saves images then loads them
+    # Less memory intensive version, which saves images
     def define_epochs(self):
         if self.samples_by_channel is None:
             self.get_samples_by_channels()
@@ -534,12 +536,29 @@ class LUMODataset(CustomDataLoader, Dataset):
 
 
     def get_data_instances(self, train_test_all, nbr_epochs):
-        self.define_epochs()
-        # does absolutely nothing since memory is a severe problem
+        # IMPORTANT: self.define needs to be called separately by the caller (cnn.py) and only ONCE before this method
+        tot_len = len(os.listdir(self.img_dir))
+        np.random.seed(42)
+        training_indices = np.random.choice(tot_len, size=int(self.split*tot_len), replace=False)
+        test_indices = np.setdiff1d(np.arange(tot_len), training_indices)
+
+        if train_test_all == 0:
+            self.len = int(tot_len*self.split)
+            self.selected_indices = np.sort(training_indices)
+        elif train_test_all == 1:
+            self.len = int(tot_len*(1- self.split))
+            self.selected_indices = np.sort(test_indices)
+        else:
+            self.len = int(tot_len)
+            self.selected_indices = np.arange(tot_len)
         return
 
     def __len__(self):
         return self.len
 
     def __getitem__(self, idx):
-        pass
+        row = self.selected_indices[idx]
+        file = f"img_row_{row}.png"
+        path = os.path.join(self.img_dir,file)
+        label = lumo_labels[row*self.epoch_size:(row+1)*self.epoch_size][self.mid]
+        return self.transform(Image.open(path)), label

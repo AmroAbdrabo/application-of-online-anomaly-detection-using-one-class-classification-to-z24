@@ -12,6 +12,7 @@ from torchvision.models import ResNet50_Weights, ResNet18_Weights
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import StepLR
 import numpy as np
+from torchvision import transforms
 from scipy import signal
 
 class CustomResNet(nn.Module):
@@ -116,6 +117,11 @@ def transform_epoch(epoch, fs):
     quadmesh = plt.pcolormesh(t_spec, f, 10*np.log10(Sxx), shading = 'gouraud')
     return pcolormesh_to_array(quadmesh)
 
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
 if __name__ == "__main__":
     building_type = 2 # set to 0 for shear loader, for Z24 set to 1, 2 for LUMO
     
@@ -133,13 +139,15 @@ if __name__ == "__main__":
     # Create the dataset and dataloader
     dataset_train = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else  Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs)) if \
-        building_type == 1 else LUMODataset(lumo_epoch_size, lambda epoch: transform_epoch(epoch, lumo_fs)) if building_type == 2 else None
+        building_type == 1 else LUMODataset(lumo_epoch_size, lambda epoch: transform_epoch(epoch, lumo_fs), transform) if building_type == 2 else None
+    #dataset_train.get_samples_by_channels()
     dataset_train.get_data_instances(0, 1) 
     #print(f"Training on {dataset_train.instances.shape[0]} instances")
 
     dataset_test = ShearBuildingLoader(shear_epoch_size, lambda epoch: transform_epoch(epoch, shear_fs)) if \
         building_type == 0 else Z24Loader(z24_epoch_size, lambda epoch: transform_epoch(epoch, z24_fs)) if \
-        building_type == 1 else LUMODataset(lumo_epoch_size, lambda epoch: transform_epoch(epoch, lumo_fs)) if building_type == 2 else None
+        building_type == 1 else LUMODataset(lumo_epoch_size, lambda epoch: transform_epoch(epoch, lumo_fs), transform) if building_type == 2 else None
+    #dataset_test.get_samples_by_channels() #  only for LUMO
     dataset_test.get_data_instances(1, 1) # 4 seconds epochs since sample_rate = 4096 and 16384 = 4096 * 4
 
     torch.cuda.empty_cache()
@@ -147,21 +155,26 @@ if __name__ == "__main__":
     test_dataloader = DataLoader(dataset_test, batch_size=4, shuffle=True)
 
     # visualize one training instance
-    visualize_instance = True # set to true to visualize 
+    visualize_instance = False # set to true to visualize 
 
     if visualize_instance:
         img_data, label = dataset_train.__getitem__(4)
-        print(f"Each instance has size {img_data.shape}") # each instance of pcolormesh image is of size (3, 129, 73) -> (3, 645, 73)
-        img = img_data.transpose(1, 2, 0)
-        print(img)
+        if isinstance(img_data, np.ndarray):
+            print(f"Each instance has size {img_data.shape}") # each instance of pcolormesh image is of size (3, 129, 73) -> (3, 645, 73)
+            img = img_data.transpose(1, 2, 0)
+            print(img)
 
-        # Display the image
-        plt.imshow(img)
-        plt.axis('off')  # To turn off axis numbers
-        plt.show()
+            # Display the image
+            plt.imshow(img)
+            plt.axis('off')  # To turn off axis numbers
+            plt.show()
+        else: # if PIL image
+            img_data.show()
 
     # Initialize the model and optimizer
-    model = CustomResNet(version="50", num_classes=2).double()
+    model = CustomResNet(version="50", num_classes=2)
+    model = model.float()
+
     #model.load_state_dict(torch.load('model_weights.pth'))
 
     # to visualize computation graph
@@ -198,6 +211,8 @@ if __name__ == "__main__":
         
         for batch in train_dataloader:
             inputs, labels = batch
+            inputs = inputs.float()
+            labels = labels.long()
 
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -205,6 +220,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()
             
             outputs = model(inputs)
+            outputs = outputs.float()
             loss = criterion(outputs, labels)
             
             loss.backward()
@@ -224,7 +240,7 @@ if __name__ == "__main__":
 
         # Calculate average loss and accuracy
         average_loss = running_loss / len(train_dataloader)
-        accuracy = 100 * correct_predictions / total_predictions
+        accuracy = 100 * (correct_predictions / total_predictions)
         
         # Store the loss and accuracy
         epoch_losses.append(average_loss)
