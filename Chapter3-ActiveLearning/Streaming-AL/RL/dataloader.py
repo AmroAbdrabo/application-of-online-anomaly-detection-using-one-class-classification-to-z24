@@ -245,7 +245,7 @@ class Z24Loader(CustomDataLoader, Dataset):
         0.1 0.3 ... 0.12
         0.4 0.1 ... 0.22 
         """
-        from preprocess import preprocess, preprocess_without_std
+        from preprocess import preprocess, preprocess_without_std # type: ignore
         good_sensors = ['R1V ', 'R2L ', 'R2T ', 'R2V ', 'R3V ']
         result = pd.DataFrame(columns=good_sensors)
         list_df = [] # should contain 17 entries, one for each damage state 
@@ -389,7 +389,7 @@ class LUMODataset(CustomDataLoader, Dataset):
         self.read_file_to_state()
 
         # image directory
-        self.img_dir = "D:\\LUMO\\IMGC"
+        self.img_dir = "C:\\Users\\amroa\\Documents\\thesis\\IMGC"
         self.len = None
         self.selected_indices = None
         self.transform = tensor_transform
@@ -533,7 +533,6 @@ class LUMODataset(CustomDataLoader, Dataset):
             gc.collect()
 
         print("Saving images done")
-
 
     def get_data_instances(self, train_test_all, nbr_epochs):
         # IMPORTANT: self.define needs to be called separately by the caller (cnn.py) and only ONCE before this method
