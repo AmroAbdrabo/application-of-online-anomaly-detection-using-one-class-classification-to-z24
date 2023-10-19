@@ -7,7 +7,10 @@ import random
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import accuracy_score
 from collections import deque
+from sklearn.svm import OneClassSVM
 import copy
+from sklearn.mixture import GaussianMixture  # Importing GaussianMixture instead of KMeans
+
 
 # returns feature vectors obtained by CNN (only convolutional layers) applied to the instances of the original dataset
 class CNNTransformedDataset(Dataset):
@@ -121,16 +124,13 @@ class Environment:
 class DQNNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQNNetwork, self).__init__()
-        self.dropout = nn.Dropout(p=0.8)
-        self.fc1 = nn.Linear(state_size, 128)
-        self.fc2 = nn.Linear(128, 32)
-        self.fc3 = nn.Linear(32, action_size)
+        self.dropout = nn.Dropout(p=0.9)
+        self.fc1 = nn.Linear(state_size, action_size)
 
     def forward(self, x):
         x = self.dropout(x)
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        return self.fc3(x)
+        x = self.fc1(x)
+        return x
 
 class DQN:
     def __init__(self, state_size, action_size):
@@ -138,8 +138,8 @@ class DQN:
         self.action_size = action_size
         self.memory = deque(maxlen=1000)
         self.gamma = 0.95  # discount rate
-        self.epsilon = 1  # exploration rate
-        self.epsilon_min = 0.01
+        self.epsilon = 0.9  # exploration rate
+        self.epsilon_min = 0.05
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
 
@@ -187,11 +187,13 @@ lumo_feat_path = "C:\\Users\\amroa\\Documents\\thesis\\resnet18_lumo_feat.npy"
 
 if __name__ == "__main__":
 
-    clf_train_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
-    clf_test_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
+    #clf_train_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
+    #clf_test_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
+    clf_train_lof = GaussianMixture(n_components=2, random_state=42) # for our one-class classifier
+    clf_test_lof = GaussianMixture(n_components=2, random_state=42)
     sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
 
-    offset = 30 #  how many healthy samples we start off with
+    offset = 1 #  how many healthy samples we start off with
     train_split = 0.7 # 70% train, 15% test, 15% val
 
     dataset_train = CNNTransformedDataset(path=lumo_feat_path, train_test_val=0, train_split=train_split)
@@ -208,7 +210,7 @@ if __name__ == "__main__":
     agent = DQN(state_size, action_size)
     batch_size = 32
     episodes = 1000
-    validation_interval = 25  # validate every 50 episodes
+    validation_interval = 5  # validate every 50 episodes
     
 
     for e in range(episodes):
