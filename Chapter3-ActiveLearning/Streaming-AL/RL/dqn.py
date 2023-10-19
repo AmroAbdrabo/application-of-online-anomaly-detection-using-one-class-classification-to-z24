@@ -121,7 +121,7 @@ class Environment:
 class DQNNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQNNetwork, self).__init__()
-        self.dropout = nn.Dropout(p=0.7)
+        self.dropout = nn.Dropout(p=0.8)
         self.fc1 = nn.Linear(state_size, 128)
         self.fc2 = nn.Linear(128, 32)
         self.fc3 = nn.Linear(32, action_size)
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     agent = DQN(state_size, action_size)
     batch_size = 32
     episodes = 1000
-    validation_interval = 50  # validate every 50 episodes
+    validation_interval = 25  # validate every 50 episodes
     
 
     for e in range(episodes):
