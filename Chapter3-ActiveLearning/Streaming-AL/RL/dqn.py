@@ -8,22 +8,29 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.metrics import accuracy_score
 from collections import deque
 import copy
-from cnn import transform_epoch
 
 # returns feature vectors obtained by CNN (only convolutional layers) applied to the instances of the original dataset
 class CNNTransformedDataset(Dataset):
-    def __init__(self, path, train, train_split):
+    def __init__(self, path, train_test_val, train_split):
         self.dataset = np.load(path)
         self.split = train_split
         tot_len = self.dataset.shape[0]
+        val_split = (1-train_split)/2
+        self.dataset[:, -1] = (-2*self.dataset[:, -1])  + 1 # make labels -1, 1 for OCC
         np.random.seed(42)
-        if train:
-            train_indices = np.random.choice(tot_len, size=int(self.split*tot_len), replace=False)
+
+        # define splits (validation, test, train)
+        train_indices = np.random.choice(tot_len, size=int(self.split*tot_len), replace=False)
+        non_train_indices = np.setdiff1d(np.arange(tot_len), train_indices)
+        val_indices = np.random.choice(non_train_indices, int(val_split*tot_len), replace=False) # hold out set for getting accuracy in reward
+        test_indices  = np.setdiff1d(non_train_indices, val_indices)
+        print(f"{len(train_indices)} train indices, {len(test_indices)} test indices, {len(val_indices)} val indices")
+        if train_test_val == 0:
             self.dataset = self.dataset[train_indices]
-        else:
-            train_indices = np.random.choice(tot_len, size=int(self.split*tot_len), replace=False)
-            test_indices  = np.setdiff1d(np.arange(tot_len), train_indices)
+        elif train_test_val == 1:
             self.dataset = self.dataset[test_indices]
+        elif train_test_val == 2:
+            self.dataset = self.dataset[val_indices]
     
     def __len__(self):
         return self.dataset.shape[0]
@@ -36,7 +43,7 @@ class CNNTransformedDataset(Dataset):
 
 # The environment here is the one class classifier. Dataset here is the transformed dataset above
 class Environment:
-    def __init__(self, model, dataset, train_env, offset, budget):
+    def __init__(self, model, dataset, train_env, offset, budget, val_set):
         # the model to train on
         self.model = model
         # the model to save later
@@ -55,9 +62,11 @@ class Environment:
         self.budget = budget
         # is it train, 0, or validation, 1, environment?
         self.train_env = train_env
+        # val set for accuracy in reward
+        self.val_set = val_set
         # start with a "warm" model
         self.train(warm_start=True)
-
+        
     def reset(self):
         # return first state and reset everything as in the constructor
         self.excluded = []
@@ -66,7 +75,7 @@ class Environment:
         self.original_model = copy.deepcopy(self.original_model)
         self.train(warm_start=True)
         next_inst, _ = self.dataset[self.inst]
-        _, score = self.train()
+        _, score = self.train(warm_start=True)
         next_st = np.append(next_inst, score)
         return next_st
     
@@ -88,15 +97,25 @@ class Environment:
     def train(self, warm_start):
         # allowed instances
         allowed_instances = np.setdiff1d(np.arange(self.inst), self.excluded) if not(warm_start) else np.arange(self.offset)
-        instances, labels = self.dataset[allowed_instances]
+        instances, labels = self.dataset.dataset[allowed_instances, :-1], self.dataset.dataset[allowed_instances, -1] 
         self.model.fit(instances)
-        new_acc = accuracy_score(labels, self.model.predict(instances)) 
+        self.model.novelty = True 
+        # get hold out accuracy
+        instances_val, labels_val = self.val_set.dataset[:, :-1], self.val_set.dataset[:, -1] 
+        #g = self.model.predict(instances_val)
+        #print(g)
+        acc1 = accuracy_score(labels_val.astype(int), self.model.predict(instances_val).astype(int))
+        acc2 = accuracy_score((-labels_val).astype(int), self.model.predict(instances_val).astype(int))
+        new_acc = max(acc1,  \
+                      acc2)
+        print(new_acc)
         change_acc = new_acc - self.acc
         self.acc = new_acc
 
         # get the latest instance and get the score
         last_inst = allowed_instances[-1]
-        score = self.model.score_samples(instances[last_inst: last_inst + 1, :])[0]
+        
+        score = self.model.score_samples(self.dataset.dataset[last_inst: last_inst + 1, :-1])[0]
         return change_acc, score
 
 class DQNNetwork(nn.Module):
@@ -117,7 +136,7 @@ class DQN:
         self.action_size = action_size
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95  # discount rate
-        self.epsilon = 0.8  # exploration rate
+        self.epsilon = 0.9  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
@@ -162,26 +181,26 @@ class DQN:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-from dataloader import ShearBuildingLoader, Z24Loader
-from cnn import CustomResNet
-
 lumo_feat_path = "C:\\Users\\amroa\\Documents\\thesis\\resnet18_lumo_feat.npy"
+
 if __name__ == "__main__":
 
-    clf_train_lof = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
-    clf_test_lof = LocalOutlierFactor(n_neighbors=16) # for our one-class classifier
+    clf_train_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
+    clf_test_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
     sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
 
     offset = 30 #  how many healthy samples we start off with
+    train_split = 0.7 # 70% train, 15% test, 15% val
 
-    dataset_train = CNNTransformedDataset(path=lumo_feat_path, train=True, train_split=0.7)
-    dataset_test = CNNTransformedDataset(path=lumo_feat_path, train=False, train_split=0.7)
+    dataset_train = CNNTransformedDataset(path=lumo_feat_path, train_test_val=0, train_split=train_split)
+    dataset_test = CNNTransformedDataset(path=lumo_feat_path, train_test_val=1, train_split=train_split)
+    dataset_val = CNNTransformedDataset(path=lumo_feat_path, train_test_val=2, train_split=train_split)
 
     # two environments one for training, the other validation
-    env_train = Environment(model = clf_train_lof, dataset = dataset_train, train_env=0, offset= offset, budget= sampling_budget)
-    env_test = Environment(model = clf_test_lof, dataset = dataset_test, train_env=1, offset= offset, budget= sampling_budget)
+    env_train = Environment(model = clf_train_lof, dataset = dataset_train, train_env=0, offset= offset, budget= sampling_budget, val_set = dataset_val)
+    env_test = Environment(model = clf_test_lof, dataset = dataset_test, train_env=1, offset= offset, budget= sampling_budget, val_set = dataset_val)
     
-    state_size = 2  # Assume a state size of 2 for simplicity
+    state_size = 513  # Assume a state size of 512 (Resnet18 output + score from OCC)
     action_size = 2  # Assume an action size of 2 for simplicity
     
     agent = DQN(state_size, action_size)
