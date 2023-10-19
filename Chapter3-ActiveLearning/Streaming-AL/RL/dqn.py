@@ -68,7 +68,7 @@ class Environment:
         # val set for accuracy in reward
         self.val_set = val_set
         # start with a "warm" model
-        self.train(warm_start=True)
+        self.train(warm_start=False)
         
     def reset(self):
         # return first state and reset everything as in the constructor
@@ -111,6 +111,7 @@ class Environment:
         acc2 = accuracy_score((-labels_val).astype(int), self.model.predict(instances_val).astype(int))
         new_acc = max(acc1,  \
                       acc2)
+        
         #print(new_acc)
         change_acc = new_acc - self.acc
         self.acc = new_acc
@@ -189,8 +190,8 @@ if __name__ == "__main__":
 
     #clf_train_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
     #clf_test_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
-    clf_train_lof = GaussianMixture(n_components=2, random_state=42) # for our one-class classifier
-    clf_test_lof = GaussianMixture(n_components=2, random_state=42)
+    clf_train_lof = OneClassSVM(kernel='rbf', nu=0.05, gamma='scale') # for our one-class classifier
+    clf_test_lof =OneClassSVM(kernel='rbf', nu=0.05, gamma='scale') 
     sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
 
     offset = 1 #  how many healthy samples we start off with
