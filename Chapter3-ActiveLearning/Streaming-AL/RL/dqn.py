@@ -108,7 +108,7 @@ class Environment:
         acc2 = accuracy_score((-labels_val).astype(int), self.model.predict(instances_val).astype(int))
         new_acc = max(acc1,  \
                       acc2)
-        print(new_acc)
+        #print(new_acc)
         change_acc = new_acc - self.acc
         self.acc = new_acc
 
@@ -121,11 +121,13 @@ class Environment:
 class DQNNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQNNetwork, self).__init__()
-        self.fc1 = nn.Linear(state_size, 24)
-        self.fc2 = nn.Linear(24, 24)
-        self.fc3 = nn.Linear(24, action_size)
+        self.dropout = nn.Dropout(p=0.7)
+        self.fc1 = nn.Linear(state_size, 128)
+        self.fc2 = nn.Linear(128, 32)
+        self.fc3 = nn.Linear(32, action_size)
 
     def forward(self, x):
+        x = self.dropout(x)
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
@@ -134,9 +136,9 @@ class DQN:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=1000)
         self.gamma = 0.95  # discount rate
-        self.epsilon = 0.9  # exploration rate
+        self.epsilon = 1  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
@@ -235,4 +237,3 @@ if __name__ == "__main__":
                 if done:
                     break
             print(f"Episode: {e}/{episodes}, Validation Reward: {total_reward}")
-        
