@@ -130,7 +130,7 @@ class DQNNetwork(nn.Module):
     
     def __init__(self, state_size, action_size):
         super(DQNNetwork, self).__init__()
-        self.dropout = nn.Dropout(p=0.9)
+        self.dropout = nn.Dropout(p=0.85)
         self.fc1 = nn.Linear(state_size, action_size)
 
     def forward(self, x):
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     #clf_test_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
     clf_train_lof = GaussianMixture(n_components=2, random_state=42) # for our one-class classifier
     clf_test_lof = GaussianMixture(n_components=2, random_state=42)
-    sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
+    sampling_budget = 100 #  for active learning, this is the max nbr of samples we can query
 
     offset = 2 #  how many healthy samples we start off with
     train_split = 0.7 # 70% train, 15% test, 15% val
@@ -236,8 +236,6 @@ if __name__ == "__main__":
     episodes = 1000
     validation_interval = 5  # validate every 50 episodes
     
-
-    iter = 0
     for e in range(episodes):
         state = env_train.reset()
         for time in range(sampling_budget+200):  # 200 is the budget for the active learning 
@@ -265,4 +263,68 @@ if __name__ == "__main__":
                 if done:
                     break
             print(f"Episode: {e}/{episodes}, Validation Reward: {total_reward}")
-            iter = iter + 1
+
+"""
+Episode: 0/1000, Validation Reward: 0.8562367864693446
+Episode: 5/1000, Validation Reward: 0.6067653276955602
+Episode: 10/1000, Validation Reward: 0.6046511627906976
+Episode: 15/1000, Validation Reward: 0.6046511627906976
+Episode: 20/1000, Validation Reward: 0.6046511627906976
+Episode: 25/1000, Validation Reward: 0.6236786469344608
+Episode: 30/1000, Validation Reward: 0.627906976744186
+Episode: 35/1000, Validation Reward: 0.6067653276955602
+Episode: 40/1000, Validation Reward: 0.638477801268499
+Episode: 45/1000, Validation Reward: 0.8477801268498943
+Episode: 50/1000, Validation Reward: 0.8456659619450317
+Episode: 55/1000, Validation Reward: 0.6342494714587739
+Episode: 60/1000, Validation Reward: 0.638477801268499
+Episode: 65/1000, Validation Reward: 0.653276955602537
+Episode: 70/1000, Validation Reward: 0.642706131078224
+Episode: 75/1000, Validation Reward: 0.813953488372093
+Episode: 80/1000, Validation Reward: 0.6680761099365751
+Episode: 85/1000, Validation Reward: 0.6448202959830867
+Episode: 90/1000, Validation Reward: 0.678646934460888
+Episode: 95/1000, Validation Reward: 0.8329809725158562
+Episode: 100/1000, Validation Reward: 0.6469344608879493
+Episode: 105/1000, Validation Reward: 0.6215644820295982
+Episode: 110/1000, Validation Reward: 0.6892177589852009
+Episode: 115/1000, Validation Reward: 0.6194503171247357
+Episode: 120/1000, Validation Reward: 0.8921775898520085
+Episode: 125/1000, Validation Reward: 0.6638477801268499
+Episode: 130/1000, Validation Reward: 0.602536997885835
+Episode: 135/1000, Validation Reward: 0.6342494714587739
+Episode: 140/1000, Validation Reward: 0.693446088794926
+Episode: 145/1000, Validation Reward: 0.9725158562367865
+Episode: 150/1000, Validation Reward: 0.693446088794926
+Episode: 155/1000, Validation Reward: 0.6490486257928119
+Episode: 160/1000, Validation Reward: 0.9809725158562368
+Episode: 165/1000, Validation Reward: 1.0
+Episode: 170/1000, Validation Reward: 0.9809725158562368
+Episode: 175/1000, Validation Reward: 0.9027484143763214
+Episode: 180/1000, Validation Reward: 0.6892177589852009
+Episode: 185/1000, Validation Reward: 0.6913319238900635
+Episode: 190/1000, Validation Reward: 0.8350951374207188
+Episode: 195/1000, Validation Reward: 0.8710359408033826
+Episode: 200/1000, Validation Reward: 0.678646934460888
+Episode: 205/1000, Validation Reward: 0.8604651162790697
+Episode: 210/1000, Validation Reward: 1.0
+Episode: 215/1000, Validation Reward: 0.9619450317124736
+Episode: 220/1000, Validation Reward: 0.6828752642706131
+Episode: 225/1000, Validation Reward: 0.6109936575052854
+Episode: 230/1000, Validation Reward: 0.6511627906976745
+Episode: 235/1000, Validation Reward: 0.6680761099365751
+Episode: 240/1000, Validation Reward: 0.642706131078224
+Episode: 245/1000, Validation Reward: 1.0
+Episode: 250/1000, Validation Reward: 1.0
+Episode: 255/1000, Validation Reward: 0.9069767441860465
+Episode: 260/1000, Validation Reward: 0.8604651162790697
+Episode: 265/1000, Validation Reward: 0.9154334038054969
+Episode: 270/1000, Validation Reward: 0.653276955602537
+Episode: 275/1000, Validation Reward: 0.8921775898520085
+Episode: 280/1000, Validation Reward: 1.0
+Episode: 285/1000, Validation Reward: 0.9513742071881607
+Episode: 290/1000, Validation Reward: 1.0
+Episode: 295/1000, Validation Reward: 0.9619450317124736
+Episode: 300/1000, Validation Reward: 0.9069767441860466
+Episode: 305/1000, Validation Reward: 0.6871035940803383
+"""
