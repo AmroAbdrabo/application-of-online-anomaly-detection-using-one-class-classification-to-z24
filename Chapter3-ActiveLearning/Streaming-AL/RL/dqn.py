@@ -19,8 +19,8 @@ class CNNTransformedDataset(Dataset):
         self.split = train_split
         tot_len = self.dataset.shape[0]
         val_split = (1-train_split)/2
-        self.dataset[:, -1] = (-2*self.dataset[:, -1])  + 1 # make labels -1, 1 for OCC
-        np.random.seed(42)
+        #self.dataset[:, -1] = (-2*self.dataset[:, -1])  + 1 # make labels -1, 1 for OCC
+        np.random.seed(41)
 
         # define splits (validation, test, train)
         train_indices = np.random.choice(tot_len, size=int(self.split*tot_len), replace=False)
@@ -75,11 +75,13 @@ class Environment:
         self.excluded = []
         self.inst = self.offset
         self.model = self.original_model
+        self.acc = 0
         self.original_model = copy.deepcopy(self.original_model)
-        self.train(warm_start=True)
+        #self.train(warm_start=True)
         next_inst, _ = self.dataset[self.inst]
-        _, score = self.train(warm_start=True)
-        next_st = np.append(next_inst, score)
+        _, score, prob = self.train(warm_start=False)
+        self.acc = 0
+        next_st = np.hstack([next_inst, score, prob])
         return next_st
     
     def step(self, action):
@@ -90,11 +92,12 @@ class Environment:
 
         self.inst = self.inst + 1 #  next instance
         next_inst, _ = self.dataset[self.inst]
-        change_acc, score = self.train(False) # larger score more likely an inlier (score and change_acc produced by next state)
+        change_acc, score, prob = self.train(False) # larger score more likely an inlier (score and change_acc produced by next state)
         done = 0
-        if self.budget == (self.inst - self.offset):
+        allowed_instances = np.setdiff1d(np.arange(self.inst), self.excluded) # instances we are "allowed" to label
+        if self.budget == (len(allowed_instances) - self.offset):
             done = 1
-        next_st = np.append(next_inst, score)
+        next_st = np.hstack([next_inst, score, prob])
         return [next_st, change_acc, done]
         
     def train(self, warm_start):
@@ -102,16 +105,15 @@ class Environment:
         allowed_instances = np.setdiff1d(np.arange(self.inst), self.excluded) if not(warm_start) else np.arange(self.offset)
         instances, labels = self.dataset.dataset[allowed_instances, :-1], self.dataset.dataset[allowed_instances, -1] 
         self.model.fit(instances)
-        self.model.novelty = True 
+        #self.model.novelty = True 
         # get hold out accuracy
         instances_val, labels_val = self.val_set.dataset[:, :-1], self.val_set.dataset[:, -1] 
         #g = self.model.predict(instances_val)
         #print(g)
         acc1 = accuracy_score(labels_val.astype(int), self.model.predict(instances_val).astype(int))
-        acc2 = accuracy_score((-labels_val).astype(int), self.model.predict(instances_val).astype(int))
+        acc2 = 1-acc1 #accuracy_score((-labels_val).astype(int)+1, self.model.predict(instances_val).astype(int))
         new_acc = max(acc1,  \
                       acc2)
-        
         #print(new_acc)
         change_acc = new_acc - self.acc
         self.acc = new_acc
@@ -119,10 +121,13 @@ class Environment:
         # get the latest instance and get the score
         last_inst = allowed_instances[-1]
         
-        score = self.model.score_samples(self.dataset.dataset[last_inst: last_inst + 1, :-1])[0]
-        return change_acc, score
+        score = self.model.score_samples(self.dataset.dataset[last_inst: last_inst + 1, :-1])
+        prob = self.model.predict_proba(self.dataset.dataset[last_inst: last_inst + 1, :-1])[0]
+        return change_acc, score, prob
 
+import torch.nn.functional as F
 class DQNNetwork(nn.Module):
+    
     def __init__(self, state_size, action_size):
         super(DQNNetwork, self).__init__()
         self.dropout = nn.Dropout(p=0.9)
@@ -132,13 +137,31 @@ class DQNNetwork(nn.Module):
         x = self.dropout(x)
         x = self.fc1(x)
         return x
+    
+    """
+    def __init__(self, state_size, action_size):
+        super(DQNNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_size, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, action_size)
+        self.dropout1 = nn.Dropout(p=0.5)
+        self.dropout2 = nn.Dropout(p=0.3)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = self.dropout1(x)
+        x = F.relu(self.fc2(x))
+        x = self.dropout2(x)
+        x = self.fc3(x)
+        return x
+    """
 
 class DQN:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = deque(maxlen=1000)
-        self.gamma = 0.95  # discount rate
+        self.gamma = 0.99  # discount rate
         self.epsilon = 0.9  # exploration rate
         self.epsilon_min = 0.05
         self.epsilon_decay = 0.995
@@ -190,11 +213,11 @@ if __name__ == "__main__":
 
     #clf_train_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
     #clf_test_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
-    clf_train_lof = OneClassSVM(kernel='rbf', nu=0.05, gamma='scale') # for our one-class classifier
-    clf_test_lof =OneClassSVM(kernel='rbf', nu=0.05, gamma='scale') 
+    clf_train_lof = GaussianMixture(n_components=2, random_state=42) # for our one-class classifier
+    clf_test_lof = GaussianMixture(n_components=2, random_state=42)
     sampling_budget = 200 #  for active learning, this is the max nbr of samples we can query
 
-    offset = 1 #  how many healthy samples we start off with
+    offset = 2 #  how many healthy samples we start off with
     train_split = 0.7 # 70% train, 15% test, 15% val
 
     dataset_train = CNNTransformedDataset(path=lumo_feat_path, train_test_val=0, train_split=train_split)
@@ -205,7 +228,7 @@ if __name__ == "__main__":
     env_train = Environment(model = clf_train_lof, dataset = dataset_train, train_env=0, offset= offset, budget= sampling_budget, val_set = dataset_val)
     env_test = Environment(model = clf_test_lof, dataset = dataset_test, train_env=1, offset= offset, budget= sampling_budget, val_set = dataset_val)
     
-    state_size = 513  # Assume a state size of 512 (Resnet18 output + score from OCC)
+    state_size = 515  # Assume a state size of 512 (Resnet18 output + score fromGMM + probabilistic prediction  from GMM)
     action_size = 2  # Assume an action size of 2 for simplicity
     
     agent = DQN(state_size, action_size)
@@ -214,9 +237,10 @@ if __name__ == "__main__":
     validation_interval = 5  # validate every 50 episodes
     
 
+    iter = 0
     for e in range(episodes):
         state = env_train.reset()
-        for time in range(sampling_budget):  # 200 is the budget for the active learning 
+        for time in range(sampling_budget+200):  # 200 is the budget for the active learning 
             action = agent.act(state)
             next_state, reward, done = env_train.step(action)
             agent.remember(state, action, reward, next_state, done)
@@ -231,12 +255,14 @@ if __name__ == "__main__":
         if e % validation_interval == 0:
             total_reward = 0
             state = env_test.reset()
-            for time in range(sampling_budget):
+            for time in range(sampling_budget+200):
                 # Use the greedy policy (no exploration)
                 action = np.argmax(agent.model(torch.FloatTensor(state).float().unsqueeze(0)).detach().numpy())
                 next_state, reward, done = env_test.step(action)
+                #print(f"Reward for time step {time} is {reward}")
                 total_reward += reward
                 state = next_state
                 if done:
                     break
             print(f"Episode: {e}/{episodes}, Validation Reward: {total_reward}")
+            iter = iter + 1
