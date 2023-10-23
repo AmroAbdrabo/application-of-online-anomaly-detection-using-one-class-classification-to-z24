@@ -184,7 +184,10 @@ class DQN:
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         state = torch.FloatTensor(state).float().unsqueeze(0)
+        
+        self.model.eval()
         q_values = self.model(state)
+        self.model.train()
         return torch.argmax(q_values).item()
 
     def replay(self, batch_size):
@@ -253,6 +256,9 @@ if __name__ == "__main__":
         if e % validation_interval == 0:
             total_reward = 0
             state = env_test.reset()
+            agent.model.eval()
+            # save it
+            torch.save(agent.model.state_dict(), f'.\\RL_experiments\\agent_episode_{e}.pth')
             for time in range(sampling_budget+200):
                 # Use the greedy policy (no exploration)
                 action = np.argmax(agent.model(torch.FloatTensor(state).float().unsqueeze(0)).detach().numpy())
@@ -262,6 +268,7 @@ if __name__ == "__main__":
                 state = next_state
                 if done:
                     break
+            agent.model.train() 
             print(f"Episode: {e}/{episodes}, Validation Reward: {total_reward}")
 
 """
