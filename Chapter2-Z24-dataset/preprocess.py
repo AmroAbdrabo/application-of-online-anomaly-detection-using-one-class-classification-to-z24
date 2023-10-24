@@ -1,7 +1,9 @@
 import numpy as np
 from scipy.signal import butter, lfilter
 from scipy.signal import detrend
-
+import pandas as pd
+import os
+from scipy.io import loadmat
 
 def standardize_signal(signal):
     mean_signal = np.mean(signal)
@@ -49,6 +51,9 @@ def preprocess_without_std(signal):
     sample_rate = 100
     return detrended_signal(bandpass_filter(signal, low, high, sample_rate))
 
+"""
+The following three methods from eda.ipynb in Chapter 2
+"""
 
 def data_preprocessing(data, trans_data, valid_columns = None, imputer = None, scaler = None): # for training data, default is None. For test, other parameters should be passed
     """
@@ -101,3 +106,64 @@ def data_preprocessing(data, trans_data, valid_columns = None, imputer = None, s
         X_std = scaler.transform(X_imputed)
 
     return X_std, valid_columns, imputer, scaler
+
+def get_dataframes(avt_files):
+    """
+    This method returns a list of dataframes # type: ignore
+    A dataframe is of the form: # type: ignore
+    R1V R2L ... R3V  (column names)
+    0.1 0.3 ... 0.12
+    0.4 0.1 ... 0.22 
+    """
+    good_sensors = ['R1V ', 'R2L ', 'R2T ', 'R2V ', 'R3V ']
+    result = pd.DataFrame(columns=good_sensors)
+    list_df = [] # should contain 17 entries, one for each damage state 
+
+    # get pandas dataframes
+    for idx, avt in enumerate(avt_files):
+        # get index of the good sensor/positions
+        arr_sensors = avt['labelshulp']
+        bool_array = np.isin(arr_sensors, good_sensors) #  will contain True if entry corresponds to a good sensor
+        indices_good_sensors = np.where(bool_array)[0]
+
+        # Create a Pandas DataFrame
+        df = pd.DataFrame(data=avt['data'][:, indices_good_sensors], columns=arr_sensors[indices_good_sensors])
+        result = pd.concat([result, df], ignore_index=True)
+
+        if (idx+1) % 9 == 0:
+            # Most of the dataframes are 589824 except for 4 of them
+            # Mirror the top part to the bottom to achive the same length
+            top_rows = result.head(589824 - len(result))
+
+            # Concatenate the sliced rows to the bottom of the original DataFrame
+            new_res = pd.concat([result, top_rows], ignore_index=True)
+
+            list_df.append(new_res)
+            result = pd.DataFrame(columns=good_sensors)
+
+    return list_df
+
+def get_avt_files(root):
+    folder_path = root
+    file_list = os.listdir(folder_path)
+    avt_files = []
+
+    # walk inside data folder
+    for filename in file_list:
+        full_path = os.path.join(folder_path, filename)
+        cur_label = int(filename)
+
+        # walk inside data/[number]
+        file_nest_list = os.listdir(full_path)
+        for filename_1 in file_nest_list:
+            if filename_1 != "avt":
+                continue
+            else:
+                # full_path_2 is of the form C:\Users\amroa\Documents\thesis\data\01\avt
+                full_path_2 = os.path.join(full_path, filename_1)
+                setup_filenames = [filename for filename in os.listdir(full_path_2) if "setup" in filename]
+                for avt_file in setup_filenames:
+                    full_path_3 = os.path.join(full_path_2, avt_file) # full_path_3 is of the form C:\Users\amroa\Documents\thesis\data\01\avt\01setup09.mat
+                    avt = loadmat(full_path_3)
+                    avt_files.append(avt)
+    return avt_files
