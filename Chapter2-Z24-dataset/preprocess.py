@@ -49,7 +49,7 @@ def preprocess_without_std(signal):
     low = 1 
     high  = 30
     sample_rate = 100
-    return detrended_signal(bandpass_filter(signal, low, high, sample_rate))
+    return bandpass_filter(detrended_signal(signal), low, high, sample_rate)
 
 """
 The following three methods from eda.ipynb in Chapter 2
