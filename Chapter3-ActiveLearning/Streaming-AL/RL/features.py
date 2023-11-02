@@ -14,7 +14,7 @@ output_dir = "C:\\Users\\amroa\\Documents\\thesis\\LUMO_FEATURES"
 
 # Stores the features produced by CNN from cnn.py (after model has trained)
 if __name__ == "__main__":
-    building_type = 2 # set to 0 for shear loader, 1 for Z24, 2 for LUMO
+    building_type = 1 # set to 0 for shear loader, 1 for Z24, 2 for LUMO
     
     # size of each epoch (continuous segment/chunk of samples)
     z24_epoch_size = 16384
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     with torch.inference_mode():
         for idx, batch in enumerate(dataloader):
             inputs, labels = batch
-            inputs = inputs.to(device)
+            inputs = inputs.float().to(device)
 
             outputs = model.features(inputs)
             # Detach, move to CPU, and convert to numpy
@@ -62,4 +62,4 @@ if __name__ == "__main__":
                 list_features.append(output_instance.squeeze())
                 list_labels.append(int(label.item()))
                 #np.save(filename, output_instance)
-    np.save("resnet18_lumo_feat.npy", np.hstack((np.vstack(list_features), np.array(list_labels).reshape(-1, 1))))
+    np.save("resnet18_z24_feat.npy", np.hstack((np.vstack(list_features), np.array(list_labels).reshape(-1, 1))))

@@ -210,10 +210,11 @@ class DQN:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-lumo_feat_path = "C:\\Users\\amroa\\Documents\\thesis\\resnet18_lumo_feat.npy"
+lumo_feat_path = "C:\\Users\\amroa\\Documents\\thesis\\resnet18_z24_feat.npy"
 
 if __name__ == "__main__":
 
+    inference = True
     #clf_train_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
     #clf_test_lof = LocalOutlierFactor(n_neighbors=8, novelty=True) # for our one-class classifier
     clf_train_lof = GaussianMixture(n_components=2, random_state=42) # for our one-class classifier
@@ -221,7 +222,7 @@ if __name__ == "__main__":
     sampling_budget = 100 #  for active learning, this is the max nbr of samples we can query
 
     offset = 2 #  how many healthy samples we start off with
-    train_split = 0.7 # 70% train, 15% test, 15% val
+    train_split = 0.9 # 70% train, 15% test, 15% val
 
     dataset_train = CNNTransformedDataset(path=lumo_feat_path, train_test_val=0, train_split=train_split)
     dataset_test = CNNTransformedDataset(path=lumo_feat_path, train_test_val=1, train_split=train_split)
@@ -239,37 +240,73 @@ if __name__ == "__main__":
     episodes = 1000
     validation_interval = 5  # validate every 50 episodes
     
-    for e in range(episodes):
-        state = env_train.reset()
-        for time in range(sampling_budget+200):  # 200 is the budget for the active learning 
-            action = agent.act(state)
-            next_state, reward, done = env_train.step(action)
-            agent.remember(state, action, reward, next_state, done)
-            state = next_state
-            if done:
-                agent.update_target_model()
-                break
-        if len(agent.memory) > batch_size:
-            agent.replay(batch_size)
-
-        # validation phase
-        if e % validation_interval == 0:
-            total_reward = 0
-            state = env_test.reset()
-            agent.model.eval()
-            # save it
-            torch.save(agent.model.state_dict(), f'.\\RL_experiments\\agent_episode_{e}.pth')
-            for time in range(sampling_budget+200):
-                # Use the greedy policy (no exploration)
-                action = np.argmax(agent.model(torch.FloatTensor(state).float().unsqueeze(0)).detach().numpy())
-                next_state, reward, done = env_test.step(action)
-                #print(f"Reward for time step {time} is {reward}")
-                total_reward += reward
+    if not inference:
+        for e in range(episodes):
+            state = env_train.reset()
+            for time in range(sampling_budget+200):  # 200 is the budget for the active learning 
+                action = agent.act(state)
+                next_state, reward, done = env_train.step(action)
+                agent.remember(state, action, reward, next_state, done)
                 state = next_state
                 if done:
+                    agent.update_target_model()
                     break
-            agent.model.train() 
-            print(f"Episode: {e}/{episodes}, Validation Reward: {total_reward}")
+            if len(agent.memory) > batch_size:
+                agent.replay(batch_size)
+
+            # validation phase
+            if e % validation_interval == 0:
+                total_reward = 0
+                state = env_test.reset()
+                agent.model.eval()
+                # save it
+                torch.save(agent.model.state_dict(), f'.\\RL_experiments\\agent_episode_{e}.pth')
+                for time in range(sampling_budget+200):
+                    # Use the greedy policy (no exploration)
+                    action = np.argmax(agent.model(torch.FloatTensor(state).float().unsqueeze(0)).detach().numpy())
+                    next_state, reward, done = env_test.step(action)
+                    #print(f"Reward for time step {time} is {reward}")
+                    total_reward += reward
+                    state = next_state
+                    if done:
+                        break
+                agent.model.train() 
+                print(f"Episode: {e}/{episodes}, Validation Reward: {total_reward}")
+    else:
+
+        labeling_decision = []
+        ## for inference
+        agent.model.load_state_dict(torch.load('C:\\Users\\amroa\\Documents\\thesis\\RL_experiments\\agent_episode_175.pth'))
+        agent.model.eval()  # Set the model to evaluation mode
+        sampling_budget = 100  # Update this to your desired budget
+
+        # Replace env_train and env_test with your actual environments
+        state = env_train.reset()  # Initialize the environment for inference
+
+        total_reward = 0
+
+        for time in range(sampling_budget + 200):
+            with torch.no_grad():  # Disable gradient computation during inference
+                # Use the greedy policy (no exploration)
+                state_tensor = torch.FloatTensor(state).float().unsqueeze(0)
+                action =  np.argmax(agent.model(torch.FloatTensor(state).float().unsqueeze(0)).detach().numpy())
+                labeling_decision.append(action)
+            
+            next_state, reward, done = env_train.step(action)
+            total_reward += reward
+            state = next_state
+
+            if done:
+                print(labeling_decision)
+                print(total_reward)
+                break
+
+        print("*****")
+        print(total_reward)
+        print(labeling_decision)
+
+
+        
 
 """
 Output:
