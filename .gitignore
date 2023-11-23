@@ -2,6 +2,7 @@
 *.jpeg
 *.png
 *.pdf
+*.pkl
 *.txt
 visualize.ipynb
 exploratory_data_analysis.ipynb
