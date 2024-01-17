@@ -6,7 +6,9 @@ This repository contains the code and resources for the "Amro's Student Thesis" 
 ## Table of Contents
 
 - Introduction
+Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17
 - Requirements
+Set system environment variable 
 - Installation
 - Usage
 - Contributing

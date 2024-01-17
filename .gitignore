@@ -4,6 +4,7 @@
 *.pdf
 *.pkl
 *.txt
+data.zip
 visualize.ipynb
 exploratory_data_analysis.ipynb
 *.npy
