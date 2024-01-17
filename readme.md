@@ -9,7 +9,7 @@ This repository contains the code and resources for the "Amro's Student Thesis" 
 Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17
 - Requirements \
 Set system environment variable \
-![System variable](https://drive.usercontent.google.com/download?id=1Ubua577nCq2aIlexQT2rxoQp_iuddrs4&export=view&authuser=0)
+![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0)
 - Installation
 - Usage
 - Contributing
