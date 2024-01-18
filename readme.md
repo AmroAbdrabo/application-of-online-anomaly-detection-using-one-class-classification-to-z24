@@ -6,7 +6,7 @@ This repository contains the code and resources for the "Amro's Student Thesis" 
 ## Table of Contents
 ## Introduction
 
-The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3 folder. \ 
+The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3 folder.\
 Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17
 
 ## Requirements 
