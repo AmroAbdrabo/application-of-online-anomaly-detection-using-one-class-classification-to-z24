@@ -10,6 +10,7 @@ The only two files required to be run are eda.ipynb in Chapter2 folder and river
 Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17
 
 ## Requirements 
+- Python 3.11.5
 
 Set system environment variable. Replace path with the path in your computer of folder data. \
 ![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0) \
