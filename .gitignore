@@ -12,6 +12,7 @@ exploratory_data_analysis.ipynb
 *.pth
 /.ipynb_checkpoints/
 /__pycache__/
+/Chapter3-ActiveLearning/
 /IMGC/
 /Random/
 /code/

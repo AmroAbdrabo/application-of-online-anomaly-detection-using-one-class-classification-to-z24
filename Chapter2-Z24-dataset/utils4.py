@@ -462,7 +462,6 @@ def get_features(data_raw,sr):
     #feat_all=np.concatenate((feat_11,feat_12,feat_13,feat_14,feat_15,feat_16,feat_21,feat_22),axis=1)
     feat_all=np.concatenate((feat_11,feat_12,feat_13,feat_14,feat_16,feat_21,feat_22),axis=1)
     #print(time.time() - t)
-    print("benchmark **")
     return (feat_all)
 
 
