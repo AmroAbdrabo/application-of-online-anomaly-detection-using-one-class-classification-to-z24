@@ -14,6 +14,7 @@ Set system environment variable. Replace path with the path in your computer of 
 For Chapter2-Z24-dataset\eda.ipynb 
 
 <div align="center">
+
 | Package     | Version              |
 |-------------|----------------------|
 | numpy       | 1.26.1               |
@@ -28,6 +29,7 @@ For Chapter2-Z24-dataset\eda.ipynb
 | seaborn     | 0.12.2               |
 | tsfresh     | 0.20.1               |
 | skrebate    | 0.62                 |
+
 </div>
 
 - Installation
