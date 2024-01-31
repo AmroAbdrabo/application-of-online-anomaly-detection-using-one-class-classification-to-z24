@@ -48,7 +48,7 @@ Note, in the tutorial, I only do it for a few of the channels, though doing it f
 
 
 ## Installation
-
+The notebooks were run inside Visual Studio Code. For Ansys 2023 WB, the installation along with instructions can be found at the ETH IT Shop https://itshop.ethz.ch/ (requires VPN connection to run)
 ## Usage
 ## Contributing
 ## Acknowledgments
