@@ -35,6 +35,10 @@ For Chapter2-Z24-dataset\eda.ipynb
 
 </div>
 
+\
+Once the eda.ipynb is ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
+inside the folder pointed to by Z24_DATA.
+
 ## Installation
 
 ## Usage
