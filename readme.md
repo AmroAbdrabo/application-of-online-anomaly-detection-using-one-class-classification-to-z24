@@ -39,7 +39,7 @@ For Chapter2-Z24-dataset\eda.ipynb
 Once the eda.ipynb is ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
 inside the directed referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
 
-### - Ansys Simulated Vibration Data Generation
+## Ansys Simulated Vibration Data Generation
 
 To get the geenrated data in Chapter4-PhysicalSimulation, follow this tutorial video https://polybox.ethz.ch/index.php/s/iAWIzudH6P3gF8K.
 Note, in the tutorial, I only do it for a few of the channels, though doing it for all channels is self-explanatory. 
