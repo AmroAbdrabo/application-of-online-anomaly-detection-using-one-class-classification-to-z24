@@ -37,8 +37,7 @@ For Chapter2-Z24-dataset\eda.ipynb
 
 \
 Once the eda.ipynb is ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
-inside the directed referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project.
-\ 
+inside the directed referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. \
 
 
 ## Installation
@@ -46,6 +45,6 @@ inside the directed referenced by environment variable Z24_DATA. Next, run the r
 ## Usage
 ## Contributing
 ## Acknowledgments
-Cyprien Hoelzl, Yves Reuland, Christos Lataionitis, Panagiotis Martakis, Prof. Dr. Eleni Chatzi
+Dr. Cyprien Hoelzl, Dr. Yves Reuland, Dr. Christos Lataionitis, Dr. Panagiotis Martakis, Prof. Dr. Eleni Chatzi
 ## Contact
 amro.abdrabo@gmail.com
