@@ -32,12 +32,14 @@ For Chapter2-Z24-dataset\eda.ipynb
 | seaborn     | 0.12.2               |
 | tsfresh     | 0.20.1               |
 | skrebate    | 0.62                 |
-
+| river       | 0.19.0               |
 </div>
 
 \
 Once the eda.ipynb is ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
-inside the folder pointed to by Z24_DATA.
+inside the directed referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project.
+\ 
+
 
 ## Installation
 
