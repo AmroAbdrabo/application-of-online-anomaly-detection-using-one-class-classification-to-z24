@@ -41,8 +41,10 @@ inside the directed referenced by environment variable Z24_DATA. Next, run the r
 
 ## Ansys Simulated Vibration Data Generation
 
-To get the geenrated data in Chapter4-PhysicalSimulation, follow this tutorial video https://polybox.ethz.ch/index.php/s/iAWIzudH6P3gF8K.
+To get the generated Excel data of the frequency response in Chapter4-PhysicalSimulation, follow this tutorial video https://polybox.ethz.ch/index.php/s/iAWIzudH6P3gF8K.
 Note, in the tutorial, I only do it for a few of the channels, though doing it for all channels is self-explanatory. 
+![Ansys screenshot](https://drive.usercontent.google.com/download?id=1Ig5SJIwKs5HkKpB3Jd53_PWp2A9bHNTi&export=view&authuser=0)
+
 
 
 ## Installation
