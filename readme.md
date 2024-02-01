@@ -4,6 +4,7 @@
 This repository contains the code and resources for the "Amro's Student Thesis" project. The project aims to investigate and implement various techniques for assessing the damage state of bridge.
 
 ## Introduction
+Modes of thw Z24 bridge. All supports are chosen as fixed supports. Fixed supports are chosen at pier bases, as well as the two ends of the bridge that merge with the road. 
 ![Modal shapes](https://drive.usercontent.google.com/download?id=12GrWRltz42P_b4djttd1gvW2yIQ7KqEy&export=view&authuser=0)
 
 ## Requirements 
