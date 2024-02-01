@@ -1,7 +1,7 @@
 # Master Thesis of Amro
 ## Overview
 
-This repository contains the code and resources for the Amro's Master Thesis project. The project aims to investigate and implement various techniques for assessing the damage state of bridge.
+This repository contains the code and resources for Amro's Master Thesis project. The project aims to investigate and implement various techniques for assessing the damage state of bridge.
 
 ## Introduction
 Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed supports are chosen at pier bases, as well as the two ends of the bridge that merge with the road. 
