@@ -17,9 +17,6 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 | numpy       | 1.26.1               |
 | matplotlib  | 3.7.2                |
 | sklearn     | 1.3.0                |
-| os          | version not available|
-| random      | version not available|
-| warnings    | version not available|
 | xgboost     | 1.7.6                |
 | pandas      | 2.0.3                |
 | scipy       | 1.11.2               |
