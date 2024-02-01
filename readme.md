@@ -38,16 +38,13 @@ For MacOS users, refer to https://phoenixnap.com/kb/set-environment-variable-mac
 The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder. Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17. Set system environment variable to point to path of /data folder. Replace path with the path in your computer of folder data. 
 
 
-Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
-inside the directory referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
+Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features inside the directory referenced by environment variable Z24_DATA. You can also find these numpy files here https://polybox.ethz.ch/index.php/s/IdGWA8OKFVE0lfa. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
 
 ## Ansys Simulated Vibration Data Generation (Chapter 4)
 
 To get the generated Excel data of the frequency response in Chapter4-PhysicalSimulation, follow this tutorial video https://polybox.ethz.ch/index.php/s/iAWIzudH6P3gF8K.
 Note, in the tutorial, I only do it for a few of the channels, though doing it for all channels is self-explanatory. 
 ![Ansys screenshot](https://drive.usercontent.google.com/download?id=1Ig5SJIwKs5HkKpB3Jd53_PWp2A9bHNTi&export=view&authuser=0)
-
-
 
 ## Installation
 The notebooks were run inside Visual Studio Code, where the working directory contains the folders for all the chapters. For Ansys 2023 WB, the installation along with instructions can be found at the ETH IT Shop https://itshop.ethz.ch/ (requires VPN connection to run)
