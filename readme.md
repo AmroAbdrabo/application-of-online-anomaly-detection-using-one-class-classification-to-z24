@@ -10,13 +10,6 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 ## Requirements (Chapter 2 and 3)
 - Python 3.11.5
 
-The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder.\
-Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17.
-
-Set system environment variable. Replace path with the path in your computer of folder data. \
-![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0) \
-For Chapter2-Z24-dataset\eda.ipynb 
-
 <div align="center">
 
 | Package     | Version              |
@@ -35,6 +28,13 @@ For Chapter2-Z24-dataset\eda.ipynb
 | skrebate    | 0.62                 |
 | river       | 0.19.0               |
 </div>
+
+The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder.\
+Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17.
+
+Set system environment variable. Replace path with the path in your computer of folder data. \
+![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0) \
+For Chapter2-Z24-dataset\eda.ipynb 
 
 \
 Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
