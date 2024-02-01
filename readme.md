@@ -26,7 +26,7 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 | river       | 0.19.0               |
 </div>
 
-- <b> Path variable </b> 
+- <b> Path system variable (Windows). For MacOS, refer to https://phoenixnap.com/kb/set-environment-variable-mac </b> 
 <div align="center">
 
 ![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0) 
