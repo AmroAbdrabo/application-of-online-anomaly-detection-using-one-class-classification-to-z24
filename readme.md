@@ -37,7 +37,7 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 
 For MacOS users, refer to https://phoenixnap.com/kb/set-environment-variable-mac.
 
-The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder. Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17. Set system environment variable to point to path of /data folder. Replace path with the path in your computer of folder data. 
+The only two files required to be run are eda.ipynb in Chapter2-Z24-dataset folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder. Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17. Set system environment variable to point to path of /data folder. Replace path with the path in your computer of folder data. 
 
 
 Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features inside the directory referenced by environment variable Z24_DATA. You can also find these numpy files here https://polybox.ethz.ch/index.php/s/IdGWA8OKFVE0lfa. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
