@@ -7,7 +7,7 @@ This repository contains the code and resources for the "Amro's Student Thesis" 
 Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed supports are chosen at pier bases, as well as the two ends of the bridge that merge with the road. 
 ![Modal shapes](https://drive.usercontent.google.com/download?id=12GrWRltz42P_b4djttd1gvW2yIQ7KqEy&export=view&authuser=0)
 
-## Requirements 
+## Requirements (Chapter 2 and 3)
 - Python 3.11.5
 
 The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder.\
@@ -40,7 +40,7 @@ For Chapter2-Z24-dataset\eda.ipynb
 Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
 inside the directed referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
 
-## Ansys Simulated Vibration Data Generation
+## Ansys Simulated Vibration Data Generation (Chapter 4)
 
 To get the generated Excel data of the frequency response in Chapter4-PhysicalSimulation, follow this tutorial video https://polybox.ethz.ch/index.php/s/iAWIzudH6P3gF8K.
 Note, in the tutorial, I only do it for a few of the channels, though doing it for all channels is self-explanatory. 
