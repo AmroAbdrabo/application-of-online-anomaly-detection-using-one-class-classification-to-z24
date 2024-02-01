@@ -26,12 +26,14 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 | river       | 0.19.0               |
 </div>
 
-- <b> Path system variable (Windows). For MacOS, refer to https://phoenixnap.com/kb/set-environment-variable-mac </b> 
+- <b> Path system variable (Windows) </b> 
 <div align="center">
 
 ![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0) 
 
 </div>
+
+For MacOS users, refer to https://phoenixnap.com/kb/set-environment-variable-mac.
 
 The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder. Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17. Set system environment variable. Replace path with the path in your computer of folder data. \
 
