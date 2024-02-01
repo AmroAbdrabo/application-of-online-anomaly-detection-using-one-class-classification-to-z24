@@ -53,4 +53,4 @@ The notebooks were run inside Visual Studio Code, where the working directory co
 ## Acknowledgments
 Dr. Cyprien Hoelzl, Dr. Yves Reuland, Dr. Christos Lataionitis, Dr. Panagiotis Martakis, Prof. Dr. Eleni Chatzi
 ## Contact
-amro.abdrabo@gmail.com
+amro.abdrabo@gmail.com, https://amroabdrabo.github.io
