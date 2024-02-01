@@ -8,7 +8,7 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 ![Modal shapes](https://drive.usercontent.google.com/download?id=12GrWRltz42P_b4djttd1gvW2yIQ7KqEy&export=view&authuser=0)
 
 ## Requirements (Chapter 2 and 3)
-- Python 3.11.5
+- <b> Python 3.11.5 </b>
 
 <div align="center">
 
@@ -26,13 +26,12 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 | river       | 0.19.0               |
 </div>
 
+- <b> Path variable </b>![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0) \
 The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder. Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17. Set system environment variable. Replace path with the path in your computer of folder data. \
-![System variable](https://drive.usercontent.google.com/download?id=1GjgFIP7-BKzdv5xZ_BG8s1A3C_Arkjcf&export=view&authuser=0) \
-For Chapter2-Z24-dataset\eda.ipynb 
 
-\
+
 Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
-inside the directed referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
+inside the directory referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
 
 ## Ansys Simulated Vibration Data Generation (Chapter 4)
 
