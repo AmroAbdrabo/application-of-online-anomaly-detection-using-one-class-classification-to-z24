@@ -24,6 +24,8 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 | tsfresh     | 0.20.1               |
 | skrebate    | 0.62                 |
 | river       | 0.19.0               |
+| plotly      | 5.17.0               |
+
 </div>
 
 - <b> Path system variable (Windows) </b> 
