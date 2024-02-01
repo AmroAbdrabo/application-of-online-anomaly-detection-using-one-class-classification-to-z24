@@ -3,8 +3,8 @@
 
 This repository contains the code and resources for the "Amro's Student Thesis" project. The project aims to investigate and implement various techniques for assessing the damage state of bridge.
 
-## Table of Contents
 ## Introduction
+![Modal shapes](https://drive.usercontent.google.com/download?id=12GrWRltz42P_b4djttd1gvW2yIQ7KqEy&export=view&authuser=0)
 
 The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3 folder.\
 Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17
@@ -36,7 +36,7 @@ For Chapter2-Z24-dataset\eda.ipynb
 </div>
 
 \
-Once the eda.ipynb is ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
+Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
 inside the directed referenced by environment variable Z24_DATA. Next, run the river_experiments_occ_new.ipynb (inside Chapter3-ActiveLearning) notebook to get the outputs for the online learning segment of the project. 
 
 ## Ansys Simulated Vibration Data Generation
