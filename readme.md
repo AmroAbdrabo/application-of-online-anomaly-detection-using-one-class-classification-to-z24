@@ -35,7 +35,7 @@ Modes of the Z24 bridge. All supports are chosen as fixed supports. Fixed suppor
 
 For MacOS users, refer to https://phoenixnap.com/kb/set-environment-variable-mac.
 
-The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder. Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17. Set system environment variable. Replace path with the path in your computer of folder data. \
+The only two files required to be run are eda.ipynb in Chapter2 folder and river_experiments_occ.ipynb in Chapter3-ActiveLearning folder. Download Z24 data files for Chapter2-Z24-dataset from https://polybox.ethz.ch/index.php/s/8T6Lu8Hi8VqJcze and extract them so that folder /data/ exists, whose content is folders 01 to 17. Set system environment variable to point to path of /data folder. Replace path with the path in your computer of folder data. \
 
 
 Once the eda.ipynb has ran, you should have as output X_train_new.npy, labels_train_new.npy, X_test_new.npy, and labels_test_new.npy. Save these inside a folder called /features 
@@ -50,7 +50,7 @@ Note, in the tutorial, I only do it for a few of the channels, though doing it f
 
 
 ## Installation
-The notebooks were run inside Visual Studio Code. For Ansys 2023 WB, the installation along with instructions can be found at the ETH IT Shop https://itshop.ethz.ch/ (requires VPN connection to run)
+The notebooks were run inside Visual Studio Code, where the working directory contains the folders for all the chapters. For Ansys 2023 WB, the installation along with instructions can be found at the ETH IT Shop https://itshop.ethz.ch/ (requires VPN connection to run)
 ## Usage
 ## Contributing
 ## Acknowledgments
