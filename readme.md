@@ -53,4 +53,4 @@ The notebooks were run inside Visual Studio Code, where the working directory co
 ## Usage
 ## Contributing
 ## Acknowledgments
-Dr. Cyprien Hoelzl, Dr. Yves Reuland, Dr. Christos Lataniotis, Dr. Panagiotis Martakis, Prof. Dr. Eleni Chatzi
+Dr. Cyprien Hoelzl, Dr. Yves Reuland, Dr. Panagiotis Martakis, Prof. Dr. Eleni Chatzi
