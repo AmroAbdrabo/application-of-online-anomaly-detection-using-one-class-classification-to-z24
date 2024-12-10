@@ -1,4 +1,4 @@
-# Master Thesis of Amro
+# Code for Paper on "Application of Anomaly Detection using One-class Classification to the Z24 Bridge"
 ## Overview
 
 This repository contains the code and resources for Amro's Master Thesis project. The project aims to investigate and implement various techniques for assessing the damage state of bridge.
@@ -54,5 +54,3 @@ The notebooks were run inside Visual Studio Code, where the working directory co
 ## Contributing
 ## Acknowledgments
 Dr. Cyprien Hoelzl, Dr. Yves Reuland, Dr. Christos Lataniotis, Dr. Panagiotis Martakis, Prof. Dr. Eleni Chatzi
-## Contact
-amro.abdrabo@gmail.com
